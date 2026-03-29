@@ -114,7 +114,12 @@ export default function UsersPage() {
     setIsLoading(true);
     try {
       const res = await API.get(`/users?search=${searchTerm}`);
-      const filtered = res.data.filter((u: any) => u._id !== user?._id);
+      const currentUserEmail = user?.email;
+      const currentId = user?._id;
+      const filtered = res.data.filter((u: any) => 
+          (u._id !== currentId) && 
+          (u.email !== user?.email)
+      );
       setUsers(filtered);
     } catch (err) {
       toast.error("Failed to fetch users");

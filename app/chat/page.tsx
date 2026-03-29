@@ -70,13 +70,19 @@ export default function ChatPage() {
                  </div>
 
                  <div className="grid grid-cols-2 gap-4 max-w-sm w-full relative">
-                   <button className="p-4 rounded-2xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 transition-all group flex flex-col items-center gap-3">
+                   <button 
+                     onClick={() => router.push("/users")}
+                     className="p-4 rounded-2xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 transition-all group flex flex-col items-center gap-3"
+                   >
                       <div className="p-2 rounded-xl bg-blue-500/10 text-blue-400 group-hover:bg-blue-500/20 transition-colors">
                         <Plus className="w-5 h-5" />
                       </div>
                       <span className="text-xs font-bold text-zinc-400">New Direct</span>
                    </button>
-                   <button className="p-4 rounded-2xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 transition-all group flex flex-col items-center gap-3">
+                   <button 
+                     onClick={() => router.push("/users")}
+                     className="p-4 rounded-2xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 transition-all group flex flex-col items-center gap-3"
+                   >
                       <div className="p-2 rounded-xl bg-purple-500/10 text-purple-400 group-hover:bg-purple-500/20 transition-colors">
                         <Building2 className="w-5 h-5" />
                       </div>

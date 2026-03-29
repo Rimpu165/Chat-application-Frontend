@@ -49,6 +49,25 @@ export default function RequestsPage() {
     }
   }, [user, loading, router]);
 
+  useEffect(() => {
+    if (!socket) return;
+
+    socket.on("friendRequestReceived", (data: Request) => {
+        setRequests(prev => [data, ...prev]);
+        toast.success(`New request from ${data.fromUser.name}`);
+    });
+
+    socket.on("friendRequestAccepted", (data: any) => {
+        // If we are the ones who sent it and they accepted, it might not be in this list
+        // แต่ถ้าเราโชว์เฉพาะ received, we don't care about accepted here as much as in sidebar
+    });
+
+    return () => {
+        socket.off("friendRequestReceived");
+        socket.off("friendRequestAccepted");
+    };
+  }, [socket]);
+
   const fetchRequests = async () => {
     setIsLoading(true);
     try {
