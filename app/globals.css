@@ -1,42 +1,76 @@
 @import "tailwindcss";
 
+/* Nexora — real-chat dark theme (iOS-inspired depth + teal accent) */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --chat-bg: #06080c;
+  --chat-surface: #0f1218;
+  --chat-raised: #161a22;
+  --chat-border: #252b38;
+  --chat-accent: #2dd4bf;
+  --chat-accent-dim: rgba(45, 212, 191, 0.14);
+  --chat-bubble-out: #0d9488;
+  --chat-bubble-in: #1a1f2e;
+  --chat-text: #eef1f6;
+  --chat-muted: #8b95a8;
+  --chat-success: #34d399;
+  --background: var(--chat-bg);
+  --foreground: var(--chat-text);
 }
 
 @theme {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --color-chat-bg: var(--chat-bg);
+  --color-chat-surface: var(--chat-surface);
+  --color-chat-raised: var(--chat-raised);
+  --color-chat-border: var(--chat-border);
+  --color-chat-accent: var(--chat-accent);
+  --color-chat-accent-dim: var(--chat-accent-dim);
+  --color-chat-bubble-out: var(--chat-bubble-out);
+  --color-chat-bubble-in: var(--chat-bubble-in);
+  --color-chat-text: var(--chat-text);
+  --color-chat-muted: var(--chat-muted);
+  --color-chat-success: var(--chat-success);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  color-scheme: dark;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
-  user-select: none;
+  background-color: var(--chat-bg);
+  color: var(--chat-text);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
 
-/* Custom Scrollbar */
+/* Allow selecting text in inputs and message content */
+input,
+textarea,
+[contenteditable="true"] {
+  user-select: text;
+}
+
 @layer base {
   .custom-scrollbar::-webkit-scrollbar {
-    width: 6px;
+    width: 8px;
+    height: 8px;
   }
   .custom-scrollbar::-webkit-scrollbar-track {
     background: transparent;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: #27272a;
-    border-radius: 10px;
+    background: color-mix(in oklab, var(--chat-accent) 35%, var(--chat-border));
+    border-radius: 999px;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: #3f3f46;
+    background: color-mix(in oklab, var(--chat-accent) 55%, var(--chat-border));
   }
+}
+
+/* Toast matches theme (react-hot-toast reads these via className on Toaster) */
+.toast-nexora {
+  background: var(--chat-raised) !important;
+  color: var(--chat-text) !important;
+  border: 1px solid var(--chat-border) !important;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45) !important;
 }

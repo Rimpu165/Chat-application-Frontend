@@ -42,7 +42,7 @@ interface User {
 
 interface Room {
   _id: string;
-  groupName?: string;
+  name?: string;
   isGroup: boolean;
   participants: any[];
   admin?: any;
@@ -135,7 +135,7 @@ export default function AdminDashboard() {
   );
 
   const filteredRooms = rooms.filter(r => 
-    (r.groupName?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+    (r.name?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
     r.participants.some(p => (p.name?.toLowerCase() || "").includes(searchTerm.toLowerCase()))
   );
 
@@ -333,11 +333,11 @@ export default function AdminDashboard() {
                         <td className="px-8 py-6">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center font-bold text-blue-400">
-                              {r.isGroup ? r.groupName?.[0] : (r.participants[0]?.name?.[0] || "?")}
+                              {r.isGroup ? r.name?.[0] : (r.participants[0]?.name?.[0] || "?")}
                             </div>
                             <div>
                                <div className="font-semibold text-white">
-                                 {r.isGroup ? r.groupName : `${r.participants[0]?.name} & ${r.participants[1]?.name || '...'}`}
+                                 {r.isGroup ? r.name : `${r.participants[0]?.name} & ${r.participants[1]?.name || '...'}`}
                                </div>
                                <div className="text-xs text-zinc-500">{r.participants.length} members</div>
                             </div>

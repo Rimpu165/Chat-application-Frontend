@@ -3,7 +3,6 @@
 import { useAuth } from "@/context/AuthContext";
 import { useSocket } from "@/context/SocketContext";
 import API from "@/lib/api";
-import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Users, 
@@ -11,19 +10,19 @@ import {
   ShieldAlert, 
   LogOut, 
   Bell, 
-  Search,
   Check,
   X,
   UserCheck,
   ArrowLeft,
-  ShieldCheck
+  ShieldCheck,
+  Undo2
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 
-interface Request {
+interface IncomingRequest {
   _id: string;
   fromUser: {
     _id: string;
@@ -33,12 +32,24 @@ interface Request {
   status: string;
   createdAt: string;
 }
+interface SentRequest {
+  _id: string;
+  toUser: {
+    _id: string;
+    name: string;
+    profilePhoto?: string;
+  };
+  status: string;
+  createdAt: string;
+}
 
 export default function RequestsPage() {
   const { user, logout, loading } = useAuth();
   const { socket } = useSocket();
   const router = useRouter();
-  const [requests, setRequests] = useState<Request[]>([]);
+  const [requests, setRequests] = useState<IncomingRequest[]>([]);
+  const [sentRequests, setSentRequests] = useState<SentRequest[]>([]);
+  const [tab, setTab] = useState<"received" | "sent">("received");
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -46,25 +57,36 @@ export default function RequestsPage() {
         router.push("/login");
     } else if (user) {
         fetchRequests();
+        fetchSentRequests();
     }
   }, [user, loading, router]);
 
   useEffect(() => {
     if (!socket) return;
 
-    socket.on("friendRequestReceived", (data: Request) => {
+    socket.on("friendRequestReceived", (data: IncomingRequest) => {
         setRequests(prev => [data, ...prev]);
         toast.success(`New request from ${data.fromUser.name}`);
     });
 
-    socket.on("friendRequestAccepted", (data: any) => {
-        // If we are the ones who sent it and they accepted, it might not be in this list
-        // แต่ถ้าเราโชว์เฉพาะ received, we don't care about accepted here as much as in sidebar
+    socket.on("friendRequestAccepted", () => {
+      fetchRequests();
+      fetchSentRequests();
+    });
+    socket.on("friendRequestRejected", () => {
+      fetchRequests();
+      fetchSentRequests();
+    });
+    socket.on("friendRequestCancelled", () => {
+      fetchRequests();
+      fetchSentRequests();
     });
 
     return () => {
         socket.off("friendRequestReceived");
         socket.off("friendRequestAccepted");
+        socket.off("friendRequestRejected");
+        socket.off("friendRequestCancelled");
     };
   }, [socket]);
 
@@ -77,6 +99,14 @@ export default function RequestsPage() {
       toast.error("Failed to fetch requests");
     } finally {
       setIsLoading(false);
+    }
+  };
+  const fetchSentRequests = async () => {
+    try {
+      const res = await API.get("/friends/sent");
+      setSentRequests(res.data);
+    } catch {
+      toast.error("Failed to fetch sent requests");
     }
   };
 
@@ -95,6 +125,16 @@ export default function RequestsPage() {
     }
   };
 
+  const cancelSent = async (targetUserId: string) => {
+    try {
+      await API.delete(`/friends/cancel/${targetUserId}`);
+      toast.success("Request cancelled");
+      fetchSentRequests();
+    } catch {
+      toast.error("Failed to cancel request");
+    }
+  };
+
   if (loading || !user) return null;
 
   return (
@@ -107,7 +147,7 @@ export default function RequestsPage() {
             <div className="w-10 h-10 bg-gradient-to-tr from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
                <ShieldCheck className="w-6 h-6 text-white" />
             </div>
-            <span className="text-xl font-bold hidden lg:block tracking-tighter">Aura Network</span>
+            <span className="text-xl font-bold hidden lg:block tracking-tighter">Nexora Network</span>
          </div>
 
          <nav className="flex-1 w-full space-y-2">
@@ -152,7 +192,15 @@ export default function RequestsPage() {
                <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" /> Back
              </button>
              <h1 className="text-4xl font-bold tracking-tighter mb-2">Connect Requests</h1>
-             <p className="text-zinc-500 font-medium">You have {requests.length} people waiting to join your network.</p>
+             <p className="text-zinc-500 font-medium">
+               {tab === "received"
+                 ? `You have ${requests.length} people waiting to join your network.`
+                 : `You sent ${sentRequests.length} pending requests.`}
+             </p>
+             <div className="mt-5 inline-flex p-1 bg-zinc-900 rounded-xl border border-zinc-800">
+               <button onClick={() => setTab("received")} className={`px-4 py-2 rounded-lg text-sm ${tab === "received" ? "bg-zinc-800 text-white" : "text-zinc-500"}`}>Received</button>
+               <button onClick={() => setTab("sent")} className={`px-4 py-2 rounded-lg text-sm ${tab === "sent" ? "bg-zinc-800 text-white" : "text-zinc-500"}`}>Sent</button>
+             </div>
           </header>
 
           <section className="space-y-4">
@@ -160,7 +208,7 @@ export default function RequestsPage() {
                 Array(3).fill(0).map((_, i) => (
                   <div key={i} className="h-24 bg-zinc-900/50 rounded-3xl border border-zinc-800 animate-pulse" />
                 ))
-             ) : requests.length > 0 ? (
+             ) : tab === "received" && requests.length > 0 ? (
                 <AnimatePresence mode="popLayout">
                   {requests.map((req, i) => (
                     <motion.div
@@ -174,7 +222,7 @@ export default function RequestsPage() {
                        <div className="flex items-center gap-4">
                           <div className="w-14 h-14 rounded-2xl bg-zinc-800 border border-zinc-700 overflow-hidden flex items-center justify-center shadow-lg font-bold text-xl text-zinc-500">
                              {req.fromUser.profilePhoto ? (
-                               <img src={req.fromUser.profilePhoto} className="w-full h-full object-cover" />
+                               <img src={req.fromUser.profilePhoto} className="w-full h-full object-cover" alt={req.fromUser.name} />
                              ) : req.fromUser.name[0]}
                           </div>
                           <div>
@@ -185,6 +233,7 @@ export default function RequestsPage() {
 
                        <div className="flex items-center gap-2">
                           <button 
+                             title="Reject request"
                              onClick={() => handleAction(req._id, "reject")}
                              className="w-11 h-11 rounded-2xl border border-zinc-800 flex items-center justify-center text-zinc-500 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/20 transition-all"
                           >
@@ -200,13 +249,45 @@ export default function RequestsPage() {
                     </motion.div>
                   ))}
                 </AnimatePresence>
+             ) : tab === "sent" && sentRequests.length > 0 ? (
+               <AnimatePresence mode="popLayout">
+                 {sentRequests.map((req, i) => (
+                   <motion.div
+                     key={req._id}
+                     initial={{ opacity: 0, x: -20 }}
+                     animate={{ opacity: 1, x: 0 }}
+                     exit={{ opacity: 0, scale: 0.95 }}
+                     transition={{ delay: i * 0.05 }}
+                     className="bg-zinc-900/40 border border-zinc-800 rounded-3xl p-4 flex items-center justify-between group hover:border-zinc-700 transition-all"
+                   >
+                     <div className="flex items-center gap-4">
+                       <div className="w-14 h-14 rounded-2xl bg-zinc-800 border border-zinc-700 overflow-hidden flex items-center justify-center shadow-lg font-bold text-xl text-zinc-500">
+                         {req.toUser.profilePhoto ? (
+                           <img src={req.toUser.profilePhoto} className="w-full h-full object-cover" alt={req.toUser.name} />
+                         ) : req.toUser.name[0]}
+                       </div>
+                       <div>
+                         <h3 className="font-bold text-zinc-100 uppercase tracking-tight">{req.toUser.name}</h3>
+                         <p className="text-xs text-zinc-500 font-medium tracking-wide">Waiting for response</p>
+                       </div>
+                     </div>
+
+                     <button
+                       onClick={() => cancelSent(req.toUser._id)}
+                       className="px-5 h-11 rounded-2xl border border-zinc-700 text-zinc-300 font-semibold flex items-center gap-2 hover:text-amber-400 hover:border-amber-500/40"
+                     >
+                       <Undo2 className="w-4 h-4" /> Cancel
+                     </button>
+                   </motion.div>
+                 ))}
+               </AnimatePresence>
              ) : (
                 <div className="flex flex-col items-center justify-center py-32 text-center">
                    <div className="w-20 h-20 bg-zinc-900 border border-zinc-800 rounded-[32px] flex items-center justify-center mb-6">
                       <UserCheck className="w-10 h-10 text-zinc-700" />
                    </div>
                    <h2 className="text-xl font-bold mb-2">No pending requests</h2>
-                   <p className="text-zinc-600">Your network is fully connected!</p>
+                   <p className="text-zinc-600">Everything is up to date.</p>
                 </div>
              )}
           </section>

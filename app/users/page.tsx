@@ -3,37 +3,46 @@
 import { useAuth } from "@/context/AuthContext";
 import { useSocket } from "@/context/SocketContext";
 import API from "@/lib/api";
-import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Users, 
   Search, 
-  UserPlus, 
   Check, 
   Clock, 
-  ArrowLeft, 
   LogOut, 
   MessageCircle, 
-  Settings,
   ShieldAlert,
   ShieldCheck,
   XCircle,
   Bell,
   Plus,
-  X
+  X,
+  Undo2
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 
-interface User {
+type FriendshipStatus = "none" | "sent" | "pending" | "friends" | "rejected";
+
+interface DirectoryUser {
   _id: string;
   name: string;
   email: string;
-  profilePhoto: string;
-  friendshipStatus: "none" | "sent" | "pending" | "friends" | "rejected";
+  profilePhoto?: string;
+  friendshipStatus: FriendshipStatus;
   status: "online" | "offline";
+}
+
+interface PendingRequest {
+  _id: string;
+  fromUser: { _id: string };
+}
+
+interface SentRequest {
+  _id: string;
+  toUser: { _id: string };
 }
 
 function AvatarFallback({ name, src }: { name: string; src?: string }) {
@@ -61,67 +70,40 @@ export default function UsersPage() {
   const { user, logout, loading } = useAuth();
   const { socket, onlineUsers } = useSocket();
   const router = useRouter();
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<DirectoryUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([]);
+  const [sentRequests, setSentRequests] = useState<SentRequest[]>([]);
 
-  useEffect(() => {
-    if (!loading && !user) {
-        router.push("/login");
-    } else if (user) {
-        fetchUsers();
-    }
-  }, [user, loading, router]);
+  const pendingBySender = useMemo(() => {
+    const map = new Map<string, string>();
+    pendingRequests.forEach((r) => map.set(r.fromUser._id, r._id));
+    return map;
+  }, [pendingRequests]);
 
-  useEffect(() => {
-    if (!socket) return;
-    
-    // Listen for incoming friend requests
-    socket.on("friendRequestReceived", (data: any) => {
-        setUsers(prev => prev.map(u => 
-            u._id === data.fromUser._id ? { ...u, friendshipStatus: "pending" } : u
-        ));
-        toast.success(`New request from ${data.fromUser.name}`);
-    });
+  const sentByTarget = useMemo(() => {
+    const map = new Map<string, string>();
+    sentRequests.forEach((r) => map.set(r.toUser._id, r._id));
+    return map;
+  }, [sentRequests]);
 
-    socket.on("friendRequestAccepted", (data: any) => {
-        setUsers(prev => prev.map(u => 
-            u._id === data.toUser._id || u._id === data.fromUser._id ? { ...u, friendshipStatus: "friends" } : u
-        ));
-    });
-
-    socket.on("friendRequestRejected", (data: any) => {
-        setUsers(prev => prev.map(u => 
-            u._id === data.fromUserId ? { ...u, friendshipStatus: "none" } : u
-        ));
-    });
-
-    socket.on("friendRemoved", (data: any) => {
-        setUsers(prev => prev.map(u => 
-            u._id === data.friendId ? { ...u, friendshipStatus: "none" } : u
-        ));
-    });
-
-    return () => {
-        socket.off("friendRequestReceived");
-        socket.off("friendRequestAccepted");
-        socket.off("friendRequestRejected");
-        socket.off("friendRemoved");
-    };
-  }, [socket]);
-
-  const fetchUsers = async () => {
+  const syncAll = async (query = searchTerm) => {
+    if (!user?._id) return;
     setIsLoading(true);
     try {
-      const res = await API.get(`/users?search=${searchTerm}`);
-      const currentUserEmail = user?.email;
-      const currentId = user?._id;
-      const filtered = res.data.filter((u: any) => 
-          (u._id !== currentId) && 
-          (u.email !== user?.email)
+      const [usersRes, pendingRes, sentRes] = await Promise.all([
+        API.get(`/users?search=${encodeURIComponent(query)}`),
+        API.get("/friends/pending"),
+        API.get("/friends/sent"),
+      ]);
+      const list = (usersRes.data as DirectoryUser[]).filter(
+        (u) => u._id !== user._id && u.email.toLowerCase() !== user.email.toLowerCase()
       );
-      setUsers(filtered);
-    } catch (err) {
+      setUsers(list);
+      setPendingRequests(pendingRes.data as PendingRequest[]);
+      setSentRequests(sentRes.data as SentRequest[]);
+    } catch {
       toast.error("Failed to fetch users");
     } finally {
       setIsLoading(false);
@@ -129,60 +111,88 @@ export default function UsersPage() {
   };
 
   useEffect(() => {
+    if (!loading && !user) router.push("/login");
+    if (user) void syncAll("");
+  }, [user, loading, router]);
+
+  useEffect(() => {
     const timer = setTimeout(() => {
-      if (user) fetchUsers();
-    }, 500);
+      if (user) void syncAll(searchTerm);
+    }, 350);
     return () => clearTimeout(timer);
-  }, [searchTerm]);
+  }, [searchTerm, user]);
+
+  useEffect(() => {
+    if (!socket) return;
+    const refresh = () => void syncAll(searchTerm);
+    socket.on("friendRequestReceived", refresh);
+    socket.on("friendRequestAccepted", refresh);
+    socket.on("friendRequestRejected", refresh);
+    socket.on("friendRemoved", refresh);
+    socket.on("friendRequestCancelled", refresh);
+    return () => {
+      socket.off("friendRequestReceived", refresh);
+      socket.off("friendRequestAccepted", refresh);
+      socket.off("friendRequestRejected", refresh);
+      socket.off("friendRemoved", refresh);
+      socket.off("friendRequestCancelled", refresh);
+    };
+  }, [socket, searchTerm]);
 
   const sendRequest = async (toUserId: string) => {
     try {
       await API.post("/friends/send", { toUserId });
-      setUsers(users.map(u => u._id === toUserId ? { ...u, friendshipStatus: "sent" } : u));
+      setUsers((prev) => prev.map((u) => (u._id === toUserId ? { ...u, friendshipStatus: "sent" } : u)));
+      void syncAll(searchTerm);
       toast.success("Friend request sent");
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || "Failed to send request");
+    } catch {
+      toast.error("Failed to send request");
     }
   };
 
   const acceptRequest = async (senderId: string) => {
     try {
-        // Need to find the request ID first. The API /friends/pending can give it.
-        // Simplification for the demo: assuming accept based on user ID is handled
-        // or getting request ID from another source.
-        // Better: let the backend accept based on senderId? Or fetch pending.
-        const pendingRes = await API.get("/friends/pending");
-        const request = pendingRes.data.find((r: any) => r.fromUser._id === senderId);
-        if (request) {
-            await API.put(`/friends/accept/${request._id}`);
-            setUsers(users.map(u => u._id === senderId ? { ...u, friendshipStatus: "friends" } : u));
-            toast.success("Request accepted");
-        }
-    } catch (err) {
+      const requestId = pendingBySender.get(senderId);
+      if (!requestId) return;
+      await API.put(`/friends/accept/${requestId}`);
+      setUsers((prev) => prev.map((u) => (u._id === senderId ? { ...u, friendshipStatus: "friends" } : u)));
+      void syncAll(searchTerm);
+      toast.success("Request accepted");
+    } catch {
       toast.error("Failed to accept request");
     }
   };
 
   const rejectRequest = async (senderId: string) => {
     try {
-        const pendingRes = await API.get("/friends/pending");
-        const request = pendingRes.data.find((r: any) => r.fromUser._id === senderId);
-        if (request) {
-            await API.put(`/friends/reject/${request._id}`);
-            setUsers(users.map(u => u._id === senderId ? { ...u, friendshipStatus: "none" } : u));
-            toast.success("Request rejected");
-        }
-    } catch (err) {
+      const requestId = pendingBySender.get(senderId);
+      if (!requestId) return;
+      await API.put(`/friends/reject/${requestId}`);
+      setUsers((prev) => prev.map((u) => (u._id === senderId ? { ...u, friendshipStatus: "none" } : u)));
+      void syncAll(searchTerm);
+      toast.success("Request rejected");
+    } catch {
       toast.error("Failed to reject request");
+    }
+  };
+
+  const cancelSentRequest = async (targetUserId: string) => {
+    try {
+      await API.delete(`/friends/cancel/${targetUserId}`);
+      setUsers((prev) => prev.map((u) => (u._id === targetUserId ? { ...u, friendshipStatus: "none" } : u)));
+      void syncAll(searchTerm);
+      toast.success("Request cancelled");
+    } catch {
+      toast.error("Failed to cancel request");
     }
   };
 
   const startChat = async (targetId: string) => {
     try {
-        const res = await API.post("/rooms/direct", { receiverId: targetId });
-        router.push(`/chat?room=${res.data._id}`);
-    } catch (err) {
-        toast.error("Failed to open chat");
+      const res = await API.post("/rooms/direct", { receiverId: targetId });
+      router.push(`/chat?room=${res.data._id}`);
+    } catch {
+      toast.error("Failed to open chat");
     }
   };
 
@@ -199,7 +209,7 @@ export default function UsersPage() {
             <div className="w-10 h-10 bg-gradient-to-tr from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
                <ShieldCheck className="w-6 h-6 text-white" />
             </div>
-            <span className="text-xl font-bold hidden lg:block tracking-tighter">Aura Network</span>
+            <span className="text-xl font-bold hidden lg:block tracking-tighter">Nexora Network</span>
          </div>
 
          <nav className="flex-1 w-full space-y-2">
@@ -314,9 +324,13 @@ export default function UsersPage() {
                                     </button>
                                 )}
                                 {u.friendshipStatus === "sent" && (
-                                    <button disabled className="col-span-4 bg-zinc-800 text-amber-500/60 h-12 rounded-2xl font-bold flex items-center justify-center gap-2 cursor-not-allowed">
-                                        <Clock className="w-4 h-4" /> Pending Request
-                                    </button>
+                                  <button
+                                    onClick={() => cancelSentRequest(u._id)}
+                                    disabled={!sentByTarget.get(u._id)}
+                                    className="col-span-4 bg-zinc-800 text-amber-400 h-12 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-zinc-700 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                                  >
+                                    <Undo2 className="w-4 h-4" /> Cancel Pending
+                                  </button>
                                 )}
                                 {u.friendshipStatus === "pending" && (
                                     <div className="col-span-4 flex gap-2">
@@ -327,6 +341,7 @@ export default function UsersPage() {
                                             <Check className="w-4 h-4" /> Accept
                                         </button>
                                         <button 
+                                            title="Reject request"
                                             onClick={() => rejectRequest(u._id)}
                                             className="w-12 h-12 rounded-2xl bg-zinc-800 border border-zinc-700 flex items-center justify-center text-zinc-500 hover:text-red-500 hover:border-red-500/20 transition-all"
                                         >
@@ -343,7 +358,7 @@ export default function UsersPage() {
                                     </button>
                                 )}
                                 
-                                <button className="col-span-1 h-12 rounded-2xl bg-zinc-800 border border-zinc-700 flex items-center justify-center text-zinc-500 hover:text-white hover:bg-zinc-700 transition-all">
+                                <button title="Notifications" className="col-span-1 h-12 rounded-2xl bg-zinc-800 border border-zinc-700 flex items-center justify-center text-zinc-500 hover:text-white hover:bg-zinc-700 transition-all">
                                     <Bell className="w-4 h-4" />
                                 </button>
                             </div>

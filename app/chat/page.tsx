@@ -1,108 +1,133 @@
 "use client";
 
 import { useAuth } from "@/context/AuthContext";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 import ChatSidebar from "@/components/ChatSidebar";
 import ChatWindow from "@/components/ChatWindow";
-import { Building2, Plus, MessageSquare, Zap, Shield, Bell } from "lucide-react";
+import API from "@/lib/api";
+import { Building2, Plus, MessageSquare, Users } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-export default function ChatPage() {
-  const { user, loading } = useAuth();
+function ChatPageInner() {
+  const { user, token, loading } = useAuth();
   const router = useRouter();
-  const [selectedRoom, setSelectedRoom] = useState<any>(null);
+  const searchParams = useSearchParams();
+  const [selectedRoom, setSelectedRoom] = useState<Record<string, unknown> | null>(null);
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!loading && (!user || !token)) {
       router.push("/login");
     }
-  }, [user, loading, router]);
+  }, [user, token, loading, router]);
 
-  if (loading || !user) return null;
+  useEffect(() => {
+    const roomId = searchParams.get("room");
+    if (!roomId || loading || !token) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await API.get("/rooms");
+        const list = res.data as Record<string, unknown>[];
+        const found = list.find((r) => String(r._id) === roomId);
+        if (!cancelled && found) setSelectedRoom(found);
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [searchParams, token, loading]);
+
+  if (loading || !user || !token) return null;
 
   return (
-    <div className="flex h-screen bg-zinc-950 text-zinc-100 overflow-hidden font-sans">
-      <div className="flex w-full h-full relative z-10 transition-all duration-500">
-        
-        {/* Main Sidebar Area */}
-        <ChatSidebar 
-          onSelectRoom={setSelectedRoom} 
-          selectedRoomId={selectedRoom?._id}
-        />
+    <div className="flex h-screen min-h-0 flex-col overflow-hidden bg-chat-bg font-sans text-chat-text">
+      <div className="relative z-10 flex h-full min-h-0 w-full transition-all duration-500">
+        <ChatSidebar onSelectRoom={setSelectedRoom} selectedRoomId={selectedRoom?._id as string | undefined} />
 
-        {/* Dynamic Center/Right Area */}
-        <div className="flex-1 flex flex-col h-full bg-black relative">
+        <div className="relative flex h-full min-h-0 flex-1 flex-col bg-chat-bg">
           <AnimatePresence mode="wait">
             {selectedRoom ? (
-               <motion.div 
-                 key={selectedRoom._id}
-                 initial={{ opacity: 0, x: 20 }}
-                 animate={{ opacity: 1, x: 0 }}
-                 exit={{ opacity: 0, x: -20 }}
-                 transition={{ duration: 0.3, ease: "easeOut" }}
-                 className="flex-1"
-               >
-                 <ChatWindow 
-                   room={selectedRoom} 
-                   onClose={() => setSelectedRoom(null)} 
-                 />
-               </motion.div>
+              <motion.div
+                key={String(selectedRoom._id)}
+                initial={{ opacity: 0, x: 16 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -16 }}
+                transition={{ duration: 0.25, ease: "easeOut" }}
+                className="flex min-h-0 flex-1 flex-col overflow-hidden"
+              >
+                <ChatWindow room={selectedRoom} onClose={() => setSelectedRoom(null)} />
+              </motion.div>
             ) : (
-               <motion.div 
-                 initial={{ opacity: 0, scale: 0.95 }}
-                 animate={{ opacity: 1, scale: 1 }}
-                 className="flex-1 flex flex-col items-center justify-center p-8 text-center relative overflow-hidden"
-               >
-                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-blue-600/5 blur-[120px] rounded-full pointer-events-none" />
-                 
-                 <div className="relative mb-12 group">
-                   <div className="absolute inset-0 bg-gradient-to-tr from-blue-600 to-purple-600 rounded-3xl blur-2xl opacity-20 group-hover:opacity-40 transition-opacity" />
-                   <div className="bg-zinc-900/50 backdrop-blur-3xl border border-zinc-800 p-8 rounded-3xl relative">
-                     <div className="w-16 h-16 bg-gradient-to-tr from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-blue-500/20 group-hover:scale-110 group-hover:rotate-6 transition-transform">
-                        <MessageSquare className="w-10 h-10 text-white" />
-                     </div>
-                     <h1 className="text-3xl font-bold tracking-tight mb-2">Welcome, {user.name}</h1>
-                     <p className="text-zinc-500 max-w-xs mx-auto text-sm leading-relaxed">
-                       Aura keeps your conversations encrypted and lightning fast. Choose a chat to get started.
-                     </p>
-                   </div>
-                 </div>
+              <motion.div
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="relative flex flex-1 flex-col items-center justify-center overflow-hidden p-6 text-center sm:p-8"
+              >
+                <div className="pointer-events-none absolute left-1/2 top-1/2 h-[min(90vw,28rem)] w-[min(90vw,28rem)] -translate-x-1/2 -translate-y-1/2 rounded-full bg-chat-accent/10 blur-[100px]" />
 
-                 <div className="grid grid-cols-2 gap-4 max-w-sm w-full relative">
-                   <button 
-                     onClick={() => router.push("/users")}
-                     className="p-4 rounded-2xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 transition-all group flex flex-col items-center gap-3"
-                   >
-                      <div className="p-2 rounded-xl bg-blue-500/10 text-blue-400 group-hover:bg-blue-500/20 transition-colors">
-                        <Plus className="w-5 h-5" />
-                      </div>
-                      <span className="text-xs font-bold text-zinc-400">New Direct</span>
-                   </button>
-                   <button 
-                     onClick={() => router.push("/users")}
-                     className="p-4 rounded-2xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 transition-all group flex flex-col items-center gap-3"
-                   >
-                      <div className="p-2 rounded-xl bg-purple-500/10 text-purple-400 group-hover:bg-purple-500/20 transition-colors">
-                        <Building2 className="w-5 h-5" />
-                      </div>
-                      <span className="text-xs font-bold text-zinc-400">Join Group</span>
-                   </button>
-                 </div>
+                <div className="relative mb-10">
+                  <div className="absolute inset-0 rounded-3xl bg-chat-accent/20 blur-2xl" />
+                  <div className="relative rounded-3xl border border-chat-border bg-chat-surface/80 p-8 shadow-xl backdrop-blur-xl">
+                    <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-chat-accent text-chat-bg shadow-lg shadow-chat-accent/30">
+                      <MessageSquare className="h-9 w-9" />
+                    </div>
+                    <h1 className="mb-2 text-2xl font-semibold tracking-tight sm:text-3xl">Hi, {user.name}</h1>
+                    <p className="mx-auto max-w-xs text-sm leading-relaxed text-chat-muted">
+                      Pick a chat from the list or start a new conversation — everything syncs live.
+                    </p>
+                  </div>
+                </div>
 
-                 <div className="mt-20 flex gap-8 text-zinc-700">
-                    {[Zap, Shield, Bell].map((Icon, i) => (
-                      <div key={i} className="flex flex-col items-center gap-2">
-                        <Icon className="w-5 h-5" />
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-800">Verified</span>
-                      </div>
-                    ))}
-                 </div>
-               </motion.div>
+                <div className="relative grid w-full max-w-sm grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => router.push("/users")}
+                    className="group flex flex-col items-center gap-2 rounded-2xl border border-chat-border bg-chat-surface/90 p-4 transition-all hover:border-chat-accent/40 hover:bg-chat-raised"
+                  >
+                    <div className="rounded-xl bg-chat-accent-dim p-2 text-chat-accent transition-colors group-hover:bg-chat-accent/25">
+                      <Users className="h-5 w-5" />
+                    </div>
+                    <span className="text-xs font-semibold text-chat-muted group-hover:text-chat-text">People</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => router.push("/groups")}
+                    className="group flex flex-col items-center gap-2 rounded-2xl border border-chat-border bg-chat-surface/90 p-4 transition-all hover:border-chat-accent/40 hover:bg-chat-raised"
+                  >
+                    <div className="rounded-xl bg-chat-accent-dim p-2 text-chat-accent transition-colors group-hover:bg-chat-accent/25">
+                      <Building2 className="h-5 w-5" />
+                    </div>
+                    <span className="text-xs font-semibold text-chat-muted group-hover:text-chat-text">Groups</span>
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => router.push("/users")}
+                  className="mt-6 inline-flex items-center gap-2 rounded-full border border-chat-border bg-chat-raised px-5 py-2.5 text-sm font-medium text-chat-text transition-colors hover:border-chat-accent/50 hover:text-chat-accent"
+                >
+                  <Plus className="h-4 w-4" /> New message
+                </button>
+              </motion.div>
             )}
           </AnimatePresence>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ChatPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-screen items-center justify-center bg-chat-bg text-chat-muted">Loading…</div>
+      }
+    >
+      <ChatPageInner />
+    </Suspense>
   );
 }

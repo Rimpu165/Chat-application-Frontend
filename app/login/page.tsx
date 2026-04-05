@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "@/context/AuthContext";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { MessageSquare, Lock, Mail, ArrowRight, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -24,76 +24,77 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-6 lg:p-12 relative overflow-hidden">
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] h-[40%] bg-blue-500/10 blur-[150px] rounded-full z-0" />
+    <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-chat-bg p-6 lg:p-12">
+      <div className="absolute left-1/2 top-0 z-0 h-[40%] w-[80%] -translate-x-1/2 rounded-full bg-chat-accent/20 blur-[150px]" />
 
       <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
+        initial={{ opacity: 0, scale: 0.96 }}
         animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5 }}
-        className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-3xl p-8 md:p-10 relative z-10 shadow-2xl backdrop-blur-xl"
+        transition={{ duration: 0.45 }}
+        className="relative z-10 w-full max-w-md rounded-3xl border border-chat-border bg-chat-surface/90 p-8 shadow-2xl backdrop-blur-xl md:p-10"
       >
-        <div className="flex flex-col items-center mb-10 text-center">
-          <div className="bg-gradient-to-tr from-blue-600 to-purple-600 p-3 rounded-2xl mb-4 shadow-lg shadow-blue-500/20">
-            <MessageSquare className="text-white w-8 h-8" />
+        <div className="mb-10 flex flex-col items-center text-center">
+          <div className="mb-4 rounded-2xl bg-chat-accent p-3 text-chat-bg shadow-lg shadow-chat-accent/25">
+            <MessageSquare className="h-8 w-8" />
           </div>
-          <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Welcome Back</h1>
-          <p className="text-zinc-500 text-sm">Sign in to continue your conversations</p>
+          <h1 className="mb-2 text-3xl font-bold tracking-tight text-chat-text">Welcome back</h1>
+          <p className="text-sm text-chat-muted">Sign in — data comes from your API</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <label className="text-sm font-medium text-zinc-400 pl-2">Email Address</label>
-            <div className="relative group">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within:text-blue-500 transition-colors w-5 h-5" />
+            <label className="pl-2 text-sm font-medium text-chat-muted">Email</label>
+            <div className="group relative">
+              <Mail className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-chat-muted transition-colors group-focus-within:text-chat-accent" />
               <input
                 type="email"
                 required
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full bg-zinc-950/50 border border-zinc-800 rounded-2xl py-4 pl-12 pr-4 text-white placeholder:text-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
-                placeholder="name@example.com"
+                className="w-full rounded-2xl border border-chat-border bg-chat-bg/80 py-4 pl-12 pr-4 text-chat-text placeholder:text-chat-muted/70 focus:border-chat-accent/50 focus:outline-none focus:ring-2 focus:ring-chat-accent/25"
+                placeholder="you@example.com"
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <div className="flex justify-between items-center pl-2">
-              <label className="text-sm font-medium text-zinc-400">Password</label>
-              <a href="#" className="text-xs text-blue-500 hover:underline">Forgot?</a>
+            <div className="flex items-center justify-between pl-2">
+              <label className="text-sm font-medium text-chat-muted">Password</label>
+              <span className="text-xs text-chat-muted">Forgot?</span>
             </div>
-            <div className="relative group">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within:text-blue-500 transition-colors w-5 h-5" />
+            <div className="group relative">
+              <Lock className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-chat-muted transition-colors group-focus-within:text-chat-accent" />
               <input
                 type="password"
                 required
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="w-full bg-zinc-950/50 border border-zinc-800 rounded-2xl py-4 pl-12 pr-4 text-white placeholder:text-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
+                className="w-full rounded-2xl border border-chat-border bg-chat-bg/80 py-4 pl-12 pr-4 text-chat-text placeholder:text-chat-muted/70 focus:border-chat-accent/50 focus:outline-none focus:ring-2 focus:ring-chat-accent/25"
                 placeholder="••••••••"
               />
             </div>
           </div>
 
           <button
+            type="submit"
             disabled={isLoading}
-            className="w-full h-14 bg-white text-black font-bold rounded-2xl flex items-center justify-center gap-2 hover:bg-zinc-200 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed group shadow-xl"
+            className="group flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-chat-accent font-bold text-chat-bg shadow-lg shadow-chat-accent/20 transition-all hover:opacity-95 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isLoading ? (
-              <Loader2 className="w-6 h-6 animate-spin" />
+              <Loader2 className="h-6 w-6 animate-spin" />
             ) : (
               <>
-                Sign In <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                Sign in <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-0.5" />
               </>
             )}
           </button>
         </form>
 
-        <div className="mt-10 pt-8 border-t border-zinc-800 text-center">
-          <p className="text-zinc-500 text-sm">
-            Don't have an account?{" "}
-            <Link href="/signup" className="text-white font-medium hover:underline">
-              Join Aura now
+        <div className="mt-10 border-t border-chat-border pt-8 text-center">
+          <p className="text-sm text-chat-muted">
+            Need an account?{" "}
+            <Link href="/signup" className="font-medium text-chat-accent hover:underline">
+              Join Nexora
             </Link>
           </p>
         </div>
