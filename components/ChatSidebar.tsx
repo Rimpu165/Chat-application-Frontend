@@ -24,6 +24,8 @@ export default function ChatSidebar({ onSelectRoom, selectedRoomId }: ChatSideba
   const [pendingRequests, setPendingRequests] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState<"chats" | "friends">("chats");
+  const senderIdOf = (msg: { sender?: string | { _id?: string } }) =>
+    typeof msg?.sender === "object" ? String(msg.sender?._id ?? "") : String(msg?.sender ?? "");
 
   const loadSidebarData = () => {
     void fetchRooms();
@@ -36,7 +38,12 @@ export default function ChatSidebar({ onSelectRoom, selectedRoomId }: ChatSideba
     loadSidebarData();
   }, [authLoading, token]);
 
-  const bumpRoomWithMessage = (roomId: string, latestMessage: unknown) => {
+  const bumpRoomWithMessage = (
+    roomId: string,
+    latestMessage: unknown,
+    options?: { incrementUnread?: boolean }
+  ) => {
+    const shouldInc = Boolean(options?.incrementUnread);
     setRooms((prev) => {
       const idx = prev.findIndex((r: { _id: string }) => r._id === roomId);
       if (idx === -1) {
@@ -45,10 +52,12 @@ export default function ChatSidebar({ onSelectRoom, selectedRoomId }: ChatSideba
       }
       const next = [...prev];
       const cur = next[idx] as Record<string, unknown>;
+      const prevUnread = Number((cur as { unreadCount?: number }).unreadCount || 0);
       const updated = {
         ...cur,
         latestMessage,
         updatedAt: new Date().toISOString(),
+        unreadCount: shouldInc ? prevUnread + 1 : prevUnread,
       };
       next.splice(idx, 1);
       return [updated, ...next];
@@ -63,17 +72,31 @@ export default function ChatSidebar({ onSelectRoom, selectedRoomId }: ChatSideba
   useEffect(() => {
     if (!socket) return;
 
-    const onReceive = (msg: { room?: string | { _id?: string }; createdAt?: string }) => {
+    const onReceive = (msg: {
+      room?: string | { _id?: string };
+      createdAt?: string;
+      sender?: string | { _id?: string };
+    }) => {
       const rid = messageRoomId(msg);
-      if (rid) bumpRoomWithMessage(rid, msg);
+      const fromSelf = senderIdOf(msg) === String(user?._id ?? "");
+      if (rid) {
+        bumpRoomWithMessage(rid, msg, {
+          incrementUnread: !fromSelf && String(selectedRoomId ?? "") !== String(rid),
+        });
+      }
     };
 
     const onNotify = (data: {
       roomId: string;
-      message?: unknown;
+      message?: { sender?: string | { _id?: string } };
       preview?: string;
     }) => {
-      if (data.message) bumpRoomWithMessage(data.roomId, data.message);
+      const fromSelf = senderIdOf(data.message || {}) === String(user?._id ?? "");
+      if (data.message) {
+        bumpRoomWithMessage(data.roomId, data.message, {
+          incrementUnread: !fromSelf && String(selectedRoomId ?? "") !== String(data.roomId),
+        });
+      }
       else void fetchRooms();
     };
 
@@ -93,10 +116,21 @@ export default function ChatSidebar({ onSelectRoom, selectedRoomId }: ChatSideba
     });
     socket.on("receiveMessage", onReceive);
     socket.on("newMessageNotification", onNotify);
+    socket.on("messagesSeen", ({ roomId, byUser }: { roomId: string; byUser: string }) => {
+      if (String(byUser) !== String(user?._id ?? "")) return;
+      setRooms((prev) =>
+        prev.map((r: { _id: string; unreadCount?: number }) =>
+          String(r._id) === String(roomId) ? { ...r, unreadCount: 0 } : r
+        )
+      );
+    });
     socket.on("chatDeleted", (payload: { roomId?: string }) => {
       if (payload?.roomId) {
         setRooms((prev) => prev.filter((r: { _id: string }) => r._id !== payload.roomId));
       }
+    });
+    socket.on("chatCleared", () => {
+      void fetchRooms();
     });
 
     return () => {
@@ -106,9 +140,20 @@ export default function ChatSidebar({ onSelectRoom, selectedRoomId }: ChatSideba
       socket.off("friendRemoved");
       socket.off("receiveMessage", onReceive);
       socket.off("newMessageNotification", onNotify);
+      socket.off("messagesSeen");
       socket.off("chatDeleted");
+      socket.off("chatCleared");
     };
-  }, [socket]);
+  }, [socket, selectedRoomId, user?._id]);
+
+  useEffect(() => {
+    if (!selectedRoomId) return;
+    setRooms((prev) =>
+      prev.map((r: { _id: string; unreadCount?: number }) =>
+        String(r._id) === String(selectedRoomId) ? { ...r, unreadCount: 0 } : r
+      )
+    );
+  }, [selectedRoomId]);
 
   const fetchRooms = async () => {
     try {
@@ -236,7 +281,14 @@ export default function ChatSidebar({ onSelectRoom, selectedRoomId }: ChatSideba
             return (
               <button 
                 key={room._id}
-                onClick={() => onSelectRoom(room)}
+                onClick={() => {
+                  setRooms((prev) =>
+                    prev.map((r: { _id: string; unreadCount?: number }) =>
+                      String(r._id) === String(room._id) ? { ...r, unreadCount: 0 } : r
+                    )
+                  );
+                  onSelectRoom(room);
+                }}
                 className={cn(
                   "group flex w-full items-center gap-3 rounded-2xl p-3 text-left transition-all",
                   selectedRoomId === room._id
@@ -245,7 +297,7 @@ export default function ChatSidebar({ onSelectRoom, selectedRoomId }: ChatSideba
                 )}
               >
                 <div className="relative shrink-0">
-                  {photoUrl ? (
+                  {photoUrl && !room.isBlocked ? (
                     <img
                       src={photoUrl}
                       alt=""
@@ -277,18 +329,25 @@ export default function ChatSidebar({ onSelectRoom, selectedRoomId }: ChatSideba
                     )}>
                       {name}
                     </span>
-                    <span className={cn(
-                      "text-[10px] tabular-nums text-chat-muted",
-                      selectedRoomId === room._id && "text-chat-accent/90"
-                    )}>
-                      {lastAt}
-                    </span>
+                    <div className="ml-2 flex items-center gap-2">
+                      <span className={cn(
+                        "text-[10px] tabular-nums text-chat-muted",
+                        selectedRoomId === room._id && "text-chat-accent/90"
+                      )}>
+                        {lastAt}
+                      </span>
+                      {Number(room.unreadCount || 0) > 0 && (
+                        <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-chat-accent px-1.5 py-0.5 text-[10px] font-bold leading-none text-chat-bg">
+                          {Number(room.unreadCount) > 99 ? "99+" : Number(room.unreadCount)}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <p className={cn(
                     "truncate text-xs text-chat-muted",
                     selectedRoomId === room._id && "text-chat-text/80"
                   )}>
-                    {lastMsg}
+                    {room.isBlocked ? "Blocked chat" : lastMsg}
                   </p>
                 </div>
               </button>
@@ -348,7 +407,7 @@ export default function ChatSidebar({ onSelectRoom, selectedRoomId }: ChatSideba
            {userPhoto ? (
              <img src={userPhoto} alt="" className="h-10 w-10 rounded-full object-cover ring-2 ring-chat-border" />
            ) : (
-             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-chat-accent to-teal-600 text-sm font-bold text-chat-bg shadow-lg">
+             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-linear-to-br from-chat-accent to-teal-600 text-sm font-bold text-chat-bg shadow-lg">
                {user?.name?.[0]}
              </div>
            )}

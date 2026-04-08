@@ -1,18 +1,18 @@
 @import "tailwindcss";
 
-/* Nexora — real-chat dark theme (iOS-inspired depth + teal accent) */
+/* Nexora — midnight dark theme (indigo depth + violet accent) */
 :root {
-  --chat-bg: #06080c;
-  --chat-surface: #0f1218;
-  --chat-raised: #161a22;
-  --chat-border: #252b38;
-  --chat-accent: #2dd4bf;
-  --chat-accent-dim: rgba(45, 212, 191, 0.14);
-  --chat-bubble-out: #0d9488;
-  --chat-bubble-in: #1a1f2e;
-  --chat-text: #eef1f6;
-  --chat-muted: #8b95a8;
-  --chat-success: #34d399;
+  --chat-bg: #090b14;
+  --chat-surface: #111525;
+  --chat-raised: #191f34;
+  --chat-border: #2a3250;
+  --chat-accent: #8b5cf6;
+  --chat-accent-dim: rgba(139, 92, 246, 0.16);
+  --chat-bubble-out: #7c3aed;
+  --chat-bubble-in: #1a2038;
+  --chat-text: #f5f7ff;
+  --chat-muted: #9aa3bd;
+  --chat-success: #22c55e;
   --background: var(--chat-bg);
   --foreground: var(--chat-text);
 }

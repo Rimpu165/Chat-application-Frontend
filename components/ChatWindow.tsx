@@ -3,7 +3,7 @@
 import { useAuth } from "@/context/AuthContext";
 import { useSocket } from "@/context/SocketContext";
 import API from "@/lib/api";
-import { formatLastSeen } from "@/lib/format";
+import { formatChatTime, formatLastSeen } from "@/lib/format";
 import { cn, resolveMediaUrl } from "@/lib/utils";
 import { 
   Phone, 
@@ -17,9 +17,11 @@ import {
   Reply,
   Pencil,
   Trash2,
-  X
+  X,
+  UserX,
+  PhoneCall
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 
@@ -40,24 +42,55 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
   const [replyTo, setReplyTo] = useState<any>(null);
   const [editingId, setEditingId] = useState("");
   const [editingText, setEditingText] = useState("");
-  const [sendStatus, setSendStatus] = useState({ canSend: true, message: "" });
+  const [sendStatus, setSendStatus] = useState({
+    canSend: true,
+    message: "",
+    blockedByMe: false,
+    blockedByOther: false,
+  });
   const [incomingCall, setIncomingCall] = useState<any>(null);
   const [callActive, setCallActive] = useState(false);
+  const [activeCallIsVideo, setActiveCallIsVideo] = useState(false);
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const peerRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [showMenu, setShowMenu] = useState(false);
+  const [showCallHistory, setShowCallHistory] = useState(false);
+  const [activeCallDirection, setActiveCallDirection] = useState<"incoming" | "outgoing">("outgoing");
+  const [callDurationSec, setCallDurationSec] = useState(0);
+  const [callStartedAtMs, setCallStartedAtMs] = useState<number | null>(null);
+  const [callHistory, setCallHistory] = useState<
+    Array<{
+      _id: string;
+      type: "audio" | "video";
+      direction: "incoming" | "outgoing";
+      status: "started" | "answered" | "rejected" | "missed" | "ended";
+      createdAt: string;
+      durationSec?: number;
+      peer?: { name?: string };
+    }>
+  >([]);
 
   const otherParticipant = room.participants.find((p: any) => p._id !== user?._id);
   const isOnline = otherParticipant && onlineUsers.includes(otherParticipant._id);
   const roomName = room.isGroup ? room.name : (otherParticipant?.name || "Deleted User");
+  const isBlockedChat = Boolean(sendStatus.blockedByMe || sendStatus.blockedByOther || room?.isBlocked);
   const otherAvatarUrl = room.isGroup
     ? undefined
     : resolveMediaUrl(otherParticipant?.profilePhoto);
 
   const senderIdOf = (msg: { sender: { _id?: string } | string }) =>
     typeof msg.sender === "object" && msg.sender ? msg.sender._id : (msg.sender as string);
+
+  const formatDuration = (seconds: number) => {
+    const s = Math.max(0, Math.floor(seconds || 0));
+    const mm = String(Math.floor(s / 60)).padStart(2, "0");
+    const ss = String(s % 60).padStart(2, "0");
+    return `${mm}:${ss}`;
+  };
 
   useEffect(() => {
     fetchMessages();
@@ -71,6 +104,14 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
         const rid = typeof msg.room === "object" ? msg.room?._id : msg.room;
         if (String(rid) === String(room._id)) {
           setMessages((prev) => [...prev, msg]);
+          const senderId =
+            typeof (msg as { sender?: string | { _id?: string } }).sender === "object"
+              ? (msg as { sender?: { _id?: string } }).sender?._id
+              : (msg as { sender?: string }).sender;
+          // If I receive someone else's message while this chat is open, mark it seen immediately.
+          if (String(senderId || "") !== String(user?._id || "")) {
+            void API.put(`/messages/${room._id}/seen`);
+          }
         }
       };
       const handleEdited = ({ messageId, newText, isEdited }: any) => {
@@ -84,6 +125,11 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
       };
       const handleIncomingCall = (data: any) => setIncomingCall(data);
       const handleCallEnded = () => endCall(false);
+      const handleChatCleared = ({ roomId }: { roomId: string }) => {
+        if (String(roomId) === String(room._id)) {
+          setMessages([]);
+        }
+      };
 
       const handleTyping = ({ userId }: { userId: string }) => {
         if (userId === otherParticipant?._id) setOtherUserTyping(true);
@@ -101,15 +147,27 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
       socket.on("messageReaction", handleReaction);
       socket.on("incomingCall", handleIncomingCall);
       socket.on("callEnded", handleCallEnded);
-      socket.on("messagesSeen", ({ roomId, byUser }: { roomId: string; byUser: string }) => {
+      socket.on("chatCleared", handleChatCleared);
+      const handleMessagesSeen = ({
+        roomId,
+        byUser,
+        seenAt,
+      }: {
+        roomId: string;
+        byUser: string;
+        seenAt?: string;
+      }) => {
         if (String(roomId) !== String(room._id) || byUser === user?._id) return;
+        const seenAtMs = seenAt ? new Date(seenAt).getTime() : Number.POSITIVE_INFINITY;
         setMessages((prev) =>
           prev.map((m) => {
             const sid = senderIdOf(m);
-            return sid === user?._id ? { ...m, status: "seen" } : m;
+            const msgTime = m?.createdAt ? new Date(m.createdAt).getTime() : 0;
+            return sid === user?._id && msgTime <= seenAtMs ? { ...m, status: "seen" } : m;
           })
         );
-      });
+      };
+      socket.on("messagesSeen", handleMessagesSeen);
 
       return () => {
         socket.emit("leaveRoom", room._id);
@@ -121,7 +179,8 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
         socket.off("messageReaction", handleReaction);
         socket.off("incomingCall", handleIncomingCall);
         socket.off("callEnded", handleCallEnded);
-        socket.off("messagesSeen");
+        socket.off("chatCleared", handleChatCleared);
+        socket.off("messagesSeen", handleMessagesSeen);
       };
     }
   }, [room._id, socket, otherParticipant?._id, user?._id]);
@@ -212,12 +271,28 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
         if (event.candidate) socket.emit("iceCandidate", { to: otherParticipant._id, candidate: event.candidate });
       };
 
-      socket.on("callAccepted", async (signal) => {
-        await pc.setRemoteDescription(new RTCSessionDescription(signal));
-        setCallActive(true);
+      socket.on("callAccepted", async (payload: RTCSessionDescriptionInit | { signal: RTCSessionDescriptionInit; answeredAt?: number }) => {
+        try {
+          if (!peerRef.current || pc.signalingState === "closed") return;
+          const signal =
+            payload && typeof payload === "object" && "signal" in payload
+              ? payload.signal
+              : (payload as RTCSessionDescriptionInit);
+          const answeredAt =
+            payload && typeof payload === "object" && "answeredAt" in payload
+              ? Number(payload.answeredAt || 0)
+              : 0;
+          await pc.setRemoteDescription(new RTCSessionDescription(signal));
+          setCallStartedAtMs(answeredAt || Date.now());
+          setCallDurationSec(0);
+          setCallActive(true);
+        } catch {
+          // Ignore late/duplicate callAccepted packets after call teardown.
+        }
       });
       socket.on("iceCandidate", async (candidate) => {
         try {
+          if (!peerRef.current || pc.signalingState === "closed") return;
           await pc.addIceCandidate(new RTCIceCandidate(candidate));
         } catch {}
       });
@@ -231,6 +306,9 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
         name: user.name,
         isVideo,
       });
+      void logCallEvent("started", isVideo, "outgoing");
+      setActiveCallIsVideo(isVideo);
+      setActiveCallDirection("outgoing");
       setCallActive(true);
     } catch {
       toast.error("Unable to start call");
@@ -254,13 +332,20 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
       };
       socket.on("iceCandidate", async (candidate) => {
         try {
+          if (!peerRef.current || pc.signalingState === "closed") return;
           await pc.addIceCandidate(new RTCIceCandidate(candidate));
         } catch {}
       });
       await pc.setRemoteDescription(new RTCSessionDescription(incomingCall.signal));
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
-      socket.emit("answerCall", { to: incomingCall.from, signal: answer });
+      const answeredAt = Date.now();
+      socket.emit("answerCall", { to: incomingCall.from, signal: answer, answeredAt });
+      void logCallEvent("answered", Boolean(incomingCall.isVideo), "incoming");
+      setActiveCallIsVideo(Boolean(incomingCall.isVideo));
+      setActiveCallDirection("incoming");
+      setCallStartedAtMs(answeredAt);
+      setCallDurationSec(0);
       setIncomingCall(null);
       setCallActive(true);
     } catch {
@@ -272,12 +357,38 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
     if (notifyPeer && socket && otherParticipant?._id) {
       socket.emit("endCall", { to: otherParticipant._id });
     }
+    if (callActive) {
+      const durationSec = callStartedAtMs
+        ? Math.floor((Date.now() - callStartedAtMs) / 1000)
+        : callDurationSec;
+      void API.post("/calls/log", {
+        roomId: room._id,
+        peerId: otherParticipant?._id,
+        type: activeCallIsVideo ? "video" : "audio",
+        direction: activeCallDirection,
+        status: "ended",
+        durationSec,
+      }).catch(() => {
+        // ignore call-log errors
+      });
+    }
     peerRef.current?.close();
     peerRef.current = null;
     localStreamRef.current?.getTracks().forEach((t) => t.stop());
     localStreamRef.current = null;
     setIncomingCall(null);
     setCallActive(false);
+    setActiveCallIsVideo(false);
+    setActiveCallDirection("outgoing");
+    setCallStartedAtMs(null);
+    setCallDurationSec(0);
+    void fetchCallHistory();
+  };
+
+  const rejectIncomingCall = () => {
+    void logCallEvent("rejected", Boolean(incomingCall?.isVideo), "incoming");
+    setIncomingCall(null);
+    void fetchCallHistory();
   };
 
   const startEdit = (msg: any) => {
@@ -303,6 +414,101 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
       ? resolveMediaUrl(msg.sender.profilePhoto)
       : undefined;
 
+  useEffect(() => {
+    const onDocClick = (ev: MouseEvent) => {
+      if (!menuRef.current) return;
+      if (!menuRef.current.contains(ev.target as Node)) {
+        setShowMenu(false);
+      }
+    };
+    if (showMenu) {
+      document.addEventListener("mousedown", onDocClick);
+    }
+    return () => {
+      document.removeEventListener("mousedown", onDocClick);
+    };
+  }, [showMenu]);
+
+  useEffect(() => {
+    setShowCallHistory(false);
+    setCallHistory([]);
+  }, [room._id]);
+
+  const handleDeleteChat = async () => {
+    try {
+      await API.delete(`/rooms/${room._id}`);
+      toast.success("Chat deleted");
+      setShowMenu(false);
+      onClose();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Failed to delete chat");
+    }
+  };
+
+  const handleClearChat = async () => {
+    try {
+      await API.delete(`/messages/room/${room._id}/clear`);
+      setMessages([]);
+      toast.success("Chat cleared");
+      setShowMenu(false);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Failed to clear chat");
+    }
+  };
+
+  const handleToggleBlock = async () => {
+    if (!otherParticipant?._id) return;
+    try {
+      const res = await API.put(`/users/block/${otherParticipant._id}`);
+      toast.success(res?.data?.message || "User status updated");
+      await fetchSendStatus();
+      setShowMenu(false);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Failed to update block");
+    }
+  };
+
+  const logCallEvent = async (
+    status: "started" | "answered" | "rejected" | "missed" | "ended",
+    isVideo: boolean,
+    direction: "incoming" | "outgoing"
+  ) => {
+    if (!otherParticipant?._id) return;
+    try {
+      await API.post("/calls/log", {
+        roomId: room._id,
+        peerId: otherParticipant._id,
+        type: isVideo ? "video" : "audio",
+        direction,
+        status,
+      });
+    } catch {
+      // keep chat flow smooth even if logging fails
+    }
+  };
+
+  const fetchCallHistory = async () => {
+    try {
+      const res = await API.get(`/calls/room/${room._id}`);
+      setCallHistory(res.data || []);
+    } catch {
+      toast.error("Failed to load call history");
+    }
+  };
+
+  useEffect(() => {
+    if (!callActive || !callStartedAtMs) return;
+    const timer = setInterval(() => {
+      setCallDurationSec(Math.floor((Date.now() - callStartedAtMs) / 1000));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [callActive, callStartedAtMs]);
+
+  const liveCallDurationLabel = useMemo(
+    () => formatDuration(callDurationSec),
+    [callDurationSec]
+  );
+
   return (
     <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-chat-bg">
       <div className="pointer-events-none absolute left-[20%] top-[10%] h-[30%] w-[30%] rounded-full bg-chat-accent/5 blur-[100px]" />
@@ -315,7 +521,7 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
           </button>
           
           <div className="relative shrink-0">
-            {otherAvatarUrl ? (
+            {otherAvatarUrl && !isBlockedChat ? (
               <img
                 src={otherAvatarUrl}
                 alt=""
@@ -326,7 +532,7 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
                 {roomName[0]}
               </div>
             )}
-            {!room.isGroup && isOnline && (
+            {!room.isGroup && isOnline && !isBlockedChat && (
               <span className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-[3px] border-chat-bg bg-chat-success shadow-sm" />
             )}
           </div>
@@ -334,7 +540,9 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
           <div className="min-w-0">
              <h3 className="truncate font-semibold text-chat-text">{roomName}</h3>
              <div className="mt-0.5 flex items-center gap-1.5 text-[10px]">
-               {isOnline ? (
+               {isBlockedChat ? (
+                  <span className="text-amber-300">Blocked chat</span>
+               ) : isOnline ? (
                   <span className="flex items-center gap-1 text-chat-success"><span className="h-1.5 w-1.5 rounded-full bg-chat-success" /> Active now</span>
                ) : !room.isGroup && otherParticipant?.lastSeen ? (
                   <span className="text-chat-muted">{formatLastSeen(otherParticipant.lastSeen)}</span>
@@ -347,23 +555,127 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
         </div>
 
         <div className="flex shrink-0 items-center gap-1 sm:gap-2">
-           <button title="Voice call" type="button" onClick={() => startCall(false)} className="rounded-xl bg-chat-raised/80 p-2.5 text-chat-muted transition-all hover:bg-chat-border/80 hover:text-chat-text">
+           <button title="Voice call" type="button" onClick={() => startCall(false)} disabled={isBlockedChat} className="rounded-xl bg-chat-raised/80 p-2.5 text-chat-muted transition-all hover:bg-chat-border/80 hover:text-chat-text disabled:cursor-not-allowed disabled:opacity-40">
               <Phone className="h-4 w-4" />
            </button>
-           <button title="Video call" type="button" onClick={() => startCall(true)} className="rounded-xl bg-chat-raised/80 p-2.5 text-chat-muted transition-all hover:bg-chat-border/80 hover:text-chat-text">
+           <button title="Video call" type="button" onClick={() => startCall(true)} disabled={isBlockedChat} className="rounded-xl bg-chat-raised/80 p-2.5 text-chat-muted transition-all hover:bg-chat-border/80 hover:text-chat-text disabled:cursor-not-allowed disabled:opacity-40">
               <Video className="h-4 w-4" />
            </button>
-           <button title="More" type="button" className="rounded-xl bg-chat-raised/80 p-2.5 text-chat-muted transition-all hover:bg-chat-border/80 hover:text-chat-text">
+          <button
+            title="More"
+            type="button"
+            onClick={() => setShowMenu((v) => !v)}
+            className="rounded-xl bg-chat-raised/80 p-2.5 text-chat-muted transition-all hover:bg-chat-border/80 hover:text-chat-text"
+          >
               <MoreVertical className="h-4 w-4" />
            </button>
         </div>
       </header>
+      {showMenu && (
+        <div ref={menuRef} className="absolute right-4 top-16 z-30 w-44 rounded-xl border border-chat-border bg-chat-surface p-1.5 shadow-2xl">
+          <button
+            type="button"
+            onClick={() => {
+              setShowCallHistory(true);
+              void fetchCallHistory();
+              setShowMenu(false);
+            }}
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-chat-text hover:bg-chat-raised"
+          >
+            <PhoneCall className="h-4 w-4" />
+            Call history
+          </button>
+          <button
+            type="button"
+            onClick={handleClearChat}
+            className="w-full rounded-lg px-3 py-2 text-left text-sm text-chat-text hover:bg-chat-raised"
+          >
+            Clear chat
+          </button>
+          {!room.isGroup && (
+            <button
+              type="button"
+              onClick={handleToggleBlock}
+              className="w-full rounded-lg px-3 py-2 text-left text-sm text-amber-300 hover:bg-chat-raised"
+            >
+              Block / Unblock user
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={handleDeleteChat}
+            className="w-full rounded-lg px-3 py-2 text-left text-sm text-red-400 hover:bg-red-600/15"
+          >
+            Delete chat
+          </button>
+        </div>
+      )}
+      {showCallHistory && (
+        <>
+          <button
+            type="button"
+            aria-label="Close call history backdrop"
+            onClick={() => setShowCallHistory(false)}
+            className="absolute inset-0 z-35 bg-black/20"
+          />
+          <aside className="absolute inset-y-0 right-0 z-40 w-80 border-l border-chat-border bg-chat-surface shadow-2xl">
+            <div className="flex items-center justify-between border-b border-chat-border px-4 py-3">
+              <div className="text-sm font-semibold text-chat-text">Call history</div>
+              <button
+                type="button"
+                title="Close call history"
+                onClick={() => setShowCallHistory(false)}
+                className="rounded-lg p-1.5 text-chat-muted transition-colors hover:bg-chat-raised hover:text-chat-text"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="custom-scrollbar h-[calc(100%-53px)] space-y-2 overflow-y-auto p-3">
+              {callHistory.length === 0 ? (
+                <div className="rounded-lg bg-chat-raised/60 px-3 py-3 text-xs text-chat-muted">No call history yet</div>
+              ) : (
+                callHistory.map((c) => (
+                  <div key={c._id} className="rounded-lg bg-chat-raised/60 px-3 py-2.5">
+                    <div className="flex items-center justify-between gap-2 text-xs">
+                      <span className="font-medium text-chat-text">
+                        {c.direction === "outgoing" ? "Outgoing" : "Incoming"} {c.type}
+                      </span>
+                      <span className="text-chat-muted">{formatChatTime(c.createdAt)}</span>
+                    </div>
+                    <div className="mt-0.5 text-[11px] capitalize text-chat-muted">
+                      {c.status} {c.peer?.name ? `with ${c.peer.name}` : ""}
+                      {typeof c.durationSec === "number" && c.durationSec > 0 ? ` • ${formatDuration(c.durationSec)}` : ""}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </aside>
+        </>
+      )}
 
       {/* Messages area — only this region scrolls; header + input stay fixed */}
       <div
         ref={messagesContainerRef}
         className="custom-scrollbar relative z-0 min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-6 space-y-4"
       >
+        {isBlockedChat && !room.isGroup && (
+          <div className="mx-auto mb-3 max-w-xl rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-center text-xs text-amber-200">
+            <div className="mb-1 flex items-center justify-center gap-1.5 font-medium">
+              <UserX className="h-3.5 w-3.5" />
+              {sendStatus.blockedByMe ? "You have blocked this person." : "You are blocked by this person."}
+            </div>
+            {sendStatus.blockedByMe && (
+              <button
+                type="button"
+                onClick={handleToggleBlock}
+                className="rounded-lg bg-amber-200 px-3 py-1 text-[11px] font-semibold text-amber-900"
+              >
+                Tap to unblock
+              </button>
+            )}
+          </div>
+        )}
         {messages.map((msg, i) => {
           const isMe =
             getSenderId(msg) === user?._id ||
@@ -473,19 +785,29 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
       </div>
 
       {/* Input area */}
-      <footer className="relative z-10 shrink-0 border-t border-chat-border/60 bg-gradient-to-t from-chat-bg via-chat-bg to-transparent p-4 sm:p-6">
+      <footer className="relative z-10 shrink-0 border-t border-chat-border/60 bg-linear-to-t from-chat-bg via-chat-bg to-transparent p-4 sm:p-6">
         {!sendStatus.canSend ? (
           <div className="mx-auto max-w-4xl rounded-2xl border border-chat-border bg-chat-surface/90 p-4 text-center backdrop-blur-md">
             <p className="mb-3 text-sm font-medium text-chat-muted">
               {sendStatus.message || "You've reached the message limit for this conversation."}
             </p>
-            <button 
-              type="button"
-              onClick={() => router.push("/users")}
-              className="rounded-xl bg-chat-accent px-6 py-2 text-xs font-bold text-chat-bg shadow-lg shadow-chat-accent/20 transition-all hover:opacity-90"
-            >
-              Send friend request
-            </button>
+            {sendStatus.blockedByMe ? (
+              <button
+                type="button"
+                onClick={handleToggleBlock}
+                className="rounded-xl bg-amber-200 px-6 py-2 text-xs font-bold text-amber-900 shadow-lg transition-all hover:opacity-90"
+              >
+                Tap to unblock
+              </button>
+            ) : !sendStatus.blockedByOther ? (
+              <button 
+                type="button"
+                onClick={() => router.push("/users")}
+                className="rounded-xl bg-chat-accent px-6 py-2 text-xs font-bold text-chat-bg shadow-lg shadow-chat-accent/20 transition-all hover:opacity-90"
+              >
+                Send friend request
+              </button>
+            ) : null}
           </div>
         ) : (
           <form onSubmit={handleSendMessage} className="relative mx-auto flex max-w-4xl items-center gap-2 sm:gap-3">
@@ -528,11 +850,14 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
                 <p className="text-lg font-semibold">{incomingCall.name} is calling…</p>
                 <div className="flex justify-center gap-3">
                   <button title="Accept call" type="button" onClick={acceptIncomingCall} className="rounded-xl bg-chat-accent px-4 py-2 font-medium text-chat-bg">Accept</button>
-                  <button title="Reject call" type="button" onClick={() => setIncomingCall(null)} className="rounded-xl bg-chat-raised px-4 py-2 font-medium">Reject</button>
+                  <button title="Reject call" type="button" onClick={rejectIncomingCall} className="rounded-xl bg-chat-raised px-4 py-2 font-medium">Reject</button>
                 </div>
               </div>
             ) : (
               <div>
+                <div className="mb-3 text-center text-sm font-medium text-chat-muted">
+                  Call duration: <span className="font-semibold text-chat-text">{liveCallDurationLabel}</span>
+                </div>
                 <div className="grid gap-3 md:grid-cols-2">
                   <video ref={localVideoRef} autoPlay muted className="h-52 w-full rounded-xl bg-black object-cover" />
                   <video ref={remoteVideoRef} autoPlay className="h-52 w-full rounded-xl bg-black object-cover" />
