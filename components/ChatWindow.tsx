@@ -24,6 +24,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface ChatWindowProps {
   room: any;
@@ -38,7 +39,7 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
   const [newMessage, setNewMessage] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [isTyping, setIsTyping] = useState(false);
-  const [otherUserTyping, setOtherUserTyping] = useState(false);
+  const [typingParticipants, setTypingParticipants] = useState<string[]>([]);
   const [replyTo, setReplyTo] = useState<any>(null);
   const [editingId, setEditingId] = useState("");
   const [editingText, setEditingText] = useState("");
@@ -132,11 +133,12 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
       };
 
       const handleTyping = ({ userId }: { userId: string }) => {
-        if (userId === otherParticipant?._id) setOtherUserTyping(true);
+        if (userId === user?._id) return;
+        setTypingParticipants((prev) => prev.includes(userId) ? prev : [...prev, userId]);
       };
 
       const handleStopTyping = ({ userId }: { userId: string }) => {
-        if (userId === otherParticipant?._id) setOtherUserTyping(false);
+        setTypingParticipants((prev) => prev.filter((id) => id !== userId));
       };
 
       socket.on("receiveMessage", handleNewMessage);
@@ -191,7 +193,7 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
     requestAnimationFrame(() => {
       el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
     });
-  }, [messages, otherUserTyping]);
+  }, [messages, typingParticipants]);
 
   const fetchMessages = async () => {
     try {
@@ -527,6 +529,12 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
                 alt=""
                 className="h-11 w-11 rounded-2xl border border-chat-border object-cover shadow-inner"
               />
+            ) : room.isGroup && room.groupImage ? (
+              <img
+                src={resolveMediaUrl(room.groupImage)}
+                alt=""
+                className="h-11 w-11 rounded-2xl border border-chat-border object-cover shadow-inner"
+              />
             ) : (
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-chat-border bg-chat-raised text-lg font-bold text-chat-muted shadow-inner">
                 {roomName[0]}
@@ -542,14 +550,33 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
              <div className="mt-0.5 flex items-center gap-1.5 text-[10px]">
                {isBlockedChat ? (
                   <span className="text-amber-300">Blocked chat</span>
+               ) : room.isGroup ? (
+                  <span className="flex items-center gap-1.5 text-chat-muted">
+                    {room.participants.length} members 
+                    {room.description && <span className="hidden sm:inline">• {room.description}</span>}
+                  </span>
                ) : isOnline ? (
                   <span className="flex items-center gap-1 text-chat-success"><span className="h-1.5 w-1.5 rounded-full bg-chat-success" /> Active now</span>
-               ) : !room.isGroup && otherParticipant?.lastSeen ? (
+               ) : otherParticipant?.lastSeen ? (
                   <span className="text-chat-muted">{formatLastSeen(otherParticipant.lastSeen)}</span>
                ) : (
                   <span className="text-chat-muted">Away</span>
                )}
-               {otherUserTyping && <span className="ml-2 animate-pulse font-medium text-chat-accent">typing…</span>}
+               <AnimatePresence>
+                 {typingParticipants.length > 0 && (
+                   <motion.span 
+                    initial={{ opacity: 0, x: -5 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -5 }}
+                    className="ml-2 font-medium text-chat-accent"
+                   >
+                     {typingParticipants.length === 1 
+                       ? `${room.participants.find((p: any) => p._id === typingParticipants[0])?.name || "Someone"} is typing…`
+                       : `${typingParticipants.length} people are typing…`
+                     }
+                   </motion.span>
+                 )}
+               </AnimatePresence>
              </div>
           </div>
         </div>
@@ -773,15 +800,27 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
             </div>
           );
         })}
-        {otherUserTyping && (
-           <div className="mr-auto flex items-center gap-3">
-             <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-chat-raised shadow-sm">
-                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-chat-muted [animation-delay:-0.3s]" />
-                <span className="mx-0.5 h-1.5 w-1.5 animate-bounce rounded-full bg-chat-muted [animation-delay:-0.15s]" />
-                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-chat-muted" />
-             </div>
-           </div>
-        )}
+        <AnimatePresence>
+          {typingParticipants.map(id => {
+            const p = room.participants.find((part: any) => part._id === id);
+            return (
+              <motion.div 
+                key={id} 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                className="mr-auto flex items-center gap-3"
+              >
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-chat-bubble-in border border-chat-border shadow-sm">
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-chat-muted [animation-delay:-0.3s]" />
+                    <span className="mx-0.5 h-1.5 w-1.5 animate-bounce rounded-full bg-chat-muted [animation-delay:-0.15s]" />
+                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-chat-muted" />
+                </div>
+                {room.isGroup && <span className="text-[10px] font-bold text-chat-muted uppercase tracking-tight">{p?.name || "Typing..."}</span>}
+              </motion.div>
+            );
+          })}
+        </AnimatePresence>
       </div>
 
       {/* Input area */}

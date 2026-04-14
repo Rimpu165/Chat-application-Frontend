@@ -272,7 +272,7 @@ export default function ChatSidebar({ onSelectRoom, selectedRoomId }: ChatSideba
             const name = room.isGroup ? room.name : (otherParticipant?.name || "Deleted User");
             const lastMsg = previewFromLatestMessage(room.latestMessage);
             const photoUrl = room.isGroup
-              ? undefined
+              ? resolveMediaUrl(room.groupImage)
               : resolveMediaUrl(otherParticipant?.profilePhoto);
             const lastAt = formatChatTime(
               room.latestMessage?.createdAt || room.updatedAt

@@ -23,6 +23,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
+import UserProfileModal from "@/components/UserProfileModal";
 
 type FriendshipStatus = "none" | "sent" | "pending" | "friends" | "rejected";
 
@@ -75,6 +76,7 @@ export default function UsersPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([]);
   const [sentRequests, setSentRequests] = useState<SentRequest[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
   const pendingBySender = useMemo(() => {
     const map = new Map<string, string>();
@@ -281,7 +283,8 @@ export default function UsersPage() {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: i * 0.05 }}
-                            className="bg-zinc-900/60 border border-zinc-800 rounded-[40px] p-6 hover:bg-zinc-900 hover:border-zinc-700 hover:shadow-2xl hover:shadow-blue-500/5 transition-all group relative overflow-hidden flex flex-col"
+                            onClick={() => setSelectedUserId(u._id)}
+                            className="bg-zinc-900/60 border border-zinc-800 rounded-[40px] p-6 hover:bg-zinc-900 hover:border-zinc-700 hover:shadow-2xl hover:shadow-blue-500/5 transition-all group relative overflow-hidden flex flex-col cursor-pointer"
                         >
                             <div className="flex justify-between items-start mb-6">
                                 <div className="relative group/avatar">
@@ -383,6 +386,15 @@ export default function UsersPage() {
           )}
         </div>
       </main>
+
+      {selectedUserId && (
+        <UserProfileModal 
+          userId={selectedUserId} 
+          onClose={() => setSelectedUserId(null)}
+          onActionSuccess={() => syncAll(searchTerm)}
+          isOnline={onlineUsers.includes(selectedUserId)}
+        />
+      )}
     </div>
   );
 }
