@@ -16,9 +16,16 @@ import {
   Plus, 
   X, 
   Info,
-  Layout,
-  User as UserIcon
+  User as UserIcon,
+  LayoutDashboard,
+  Activity as ActivityIcon,
+  Send,
+  Briefcase,
+  Code,
+  MapPin,
+  Heart
 } from "lucide-react";
+import ThemeToggle from "@/components/ThemeToggle";
 import { motion, AnimatePresence } from "framer-motion";
 import { resolveMediaUrl } from "@/lib/utils";
 
@@ -31,6 +38,15 @@ export default function ProfilePage() {
   const [bio, setBio] = useState(user?.bio || "");
   const [status, setStatus] = useState(user?.status || "online");
   const [isPrivate, setIsPrivate] = useState(user?.isPrivate || false);
+  const [age, setAge] = useState<number | string>(user?.age || "");
+  const [gender, setGender] = useState(user?.gender || "Secret");
+  const [location, setLocation] = useState(user?.location || "");
+  const [socialLinks, setSocialLinks] = useState({
+    instagram: user?.socialLinks?.instagram || "",
+    twitter: user?.socialLinks?.twitter || "",
+    linkedin: user?.socialLinks?.linkedin || "",
+    github: user?.socialLinks?.github || ""
+  });
   
   // Media States
   const [profileFile, setProfileFile] = useState<File | null>(null);
@@ -49,6 +65,15 @@ export default function ProfilePage() {
       setName(user.name);
       setBio(user.bio || "");
       setIsPrivate(user.isPrivate || false);
+      setAge(user.age || "");
+      setGender(user.gender || "Secret");
+      setLocation(user.location || "");
+      setSocialLinks({
+        instagram: user.socialLinks?.instagram || "",
+        twitter: user.socialLinks?.twitter || "",
+        linkedin: user.socialLinks?.linkedin || "",
+        github: user.socialLinks?.github || ""
+      });
     }
   }, [user]);
 
@@ -57,7 +82,9 @@ export default function ProfilePage() {
   const onUpdateProfile = async () => {
     setIsSaving(true);
     try {
-      const res = await API.put("/users", { name, status, bio, isPrivate });
+      const res = await API.put("/users", { 
+        name, status, bio, isPrivate, age: age === "" ? null : Number(age), gender, location, socialLinks 
+      });
       updateUser(res.data.user);
       toast.success("Profile refined!", { icon: "✨" });
     } catch (error: any) {
@@ -67,29 +94,35 @@ export default function ProfilePage() {
     }
   };
 
-  const uploadMedia = async (type: "profile" | "cover" | "gallery") => {
+  const uploadMedia = async (type: "profile" | "cover" | "gallery", filesOverride?: FileList | File | null) => {
     const toastId = toast.loading(`Uploading ${type}...`);
     try {
       const fd = new FormData();
-      if (type === "profile" && profileFile) {
-        fd.append("photo", profileFile);
+      if (type === "profile") {
+        const file = filesOverride instanceof File ? filesOverride : profileFile;
+        if (!file) throw new Error("No file selected");
+        fd.append("photo", file);
         const res = await API.put("/users/profile-photo", fd);
         updateUser(res.data.user);
         setProfileFile(null);
-      } else if (type === "cover" && coverFile) {
-        fd.append("cover", coverFile);
+      } else if (type === "cover") {
+        const file = filesOverride instanceof File ? filesOverride : coverFile;
+        if (!file) throw new Error("No file selected");
+        fd.append("cover", file);
         const res = await API.post("/users/cover-photo", fd);
         updateUser(res.data.user);
         setCoverFile(null);
-      } else if (type === "gallery" && galleryFiles) {
-        Array.from(galleryFiles).forEach(f => fd.append("images", f));
+      } else if (type === "gallery") {
+        const files = (filesOverride instanceof FileList) ? filesOverride : galleryFiles;
+        if (!files || files.length === 0) throw new Error("No files selected");
+        Array.from(files).forEach(f => fd.append("images", f));
         const res = await API.post("/users/gallery", fd);
         updateUser(res.data.user);
         setGalleryFiles(null);
       }
-      toast.success(`${type} updated!`, { id: toastId });
+      toast.success(`${type} refined!`, { id: toastId });
     } catch (error: any) {
-      toast.error("Upload failed", { id: toastId });
+      toast.error(error.message || "Upload failed", { id: toastId });
     }
   };
 
@@ -117,31 +150,34 @@ export default function ProfilePage() {
   const coverUrl = resolveMediaUrl(user.coverPhoto);
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 selection:bg-blue-500/30">
+    <div className="min-h-screen bg-chat-bg text-chat-text selection:bg-blue-500/30">
       
       {/* Cover Backdrop */}
-      <div className="relative h-64 md:h-80 w-full overflow-hidden bg-zinc-900">
+      <div className="relative h-40 md:h-52 w-full overflow-hidden bg-zinc-900 border-b border-zinc-800">
         {coverUrl ? (
           <img src={coverUrl} alt="Cover" className="h-full w-full object-cover opacity-60" />
         ) : (
           <div className="h-full w-full bg-linear-to-br from-blue-600/20 via-purple-600/20 to-zinc-950" />
         )}
         
-        <div className="absolute inset-x-0 bottom-0 h-32 bg-linear-to-t from-zinc-950 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-24 bg-linear-to-t from-zinc-950 to-transparent" />
         
-        <button 
-          onClick={() => coverInputRef.current?.click()}
-          className="absolute bottom-6 right-6 flex items-center gap-2 rounded-2xl bg-white/10 px-4 py-2 text-xs font-bold backdrop-blur-md transition-all hover:bg-white/20"
-        >
-          <Camera className="h-4 w-4" /> Change Cover
-        </button>
+        <div className="absolute right-6 bottom-6 flex items-center gap-3">
+           <ThemeToggle />
+           <button 
+             onClick={() => coverInputRef.current?.click()}
+             className="flex items-center gap-2 rounded-2xl bg-white/10 px-4 py-2 text-xs font-bold backdrop-blur-md transition-all hover:bg-white/20"
+           >
+             <Camera className="h-4 w-4" /> Change Cover
+           </button>
+        </div>
         <input ref={coverInputRef} type="file" className="hidden" accept="image/*" onChange={(e) => {
-          setCoverFile(e.target.files?.[0] || null);
-          if (e.target.files?.[0]) uploadMedia("cover");
+          const file = e.target.files?.[0];
+          if (file) uploadMedia("cover", file);
         }} />
 
         <button
-          onClick={() => router.push("/chat")}
+          onClick={() => router.push("/")}
           className="absolute left-6 top-6 flex items-center gap-2 rounded-xl bg-black/20 p-3 text-xs font-bold backdrop-blur-md transition-all hover:bg-black/40"
         >
           <ArrowLeft className="h-4 w-4" /> Exit Edit
@@ -167,8 +203,8 @@ export default function ProfilePage() {
               <Camera className="h-5 w-5" />
             </button>
             <input ref={profileInputRef} type="file" className="hidden" accept="image/*" onChange={(e) => {
-              setProfileFile(e.target.files?.[0] || null);
-              if (e.target.files?.[0]) uploadMedia("profile");
+              const file = e.target.files?.[0];
+              if (file) uploadMedia("profile", file);
             }} />
           </div>
 
@@ -232,9 +268,92 @@ export default function ProfilePage() {
                     </div>
                   </div>
 
+                  <div className="grid gap-8 md:grid-cols-3">
+                    <div className="space-y-4">
+                      <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">
+                        Age
+                      </label>
+                      <input
+                        type="number"
+                        value={age}
+                        onChange={(e) => setAge(e.target.value)}
+                        className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 h-14 px-6 text-sm font-bold focus:border-blue-500/50 focus:outline-none transition-all"
+                      />
+                    </div>
+                    <div className="space-y-4">
+                      <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">
+                        Gender
+                      </label>
+                      <select
+                        value={gender}
+                        onChange={(e) => setGender(e.target.value as any)}
+                        className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 h-14 px-6 text-sm font-bold focus:border-blue-500/50 focus:outline-none transition-all"
+                      >
+                        <option value="Secret">Secret</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+                    <div className="space-y-4">
+                      <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">
+                        Location
+                      </label>
+                      <input
+                        value={location}
+                        onChange={(e) => setLocation(e.target.value)}
+                        className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 h-14 px-6 text-sm font-bold focus:border-blue-500/50 focus:outline-none transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-6 pt-4">
+                    <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">
+                       Social Connections
+                    </label>
+                    <div className="grid gap-4 md:grid-cols-2 text-zinc-400">
+                       <div className="flex items-center gap-3 bg-zinc-950 p-4 rounded-2xl border border-zinc-800 text-zinc-400">
+                          <Camera className="h-4 w-4" />
+                          <input 
+                            placeholder="Instagram username" 
+                            className="bg-transparent text-sm focus:outline-none w-full" 
+                            value={socialLinks.instagram}
+                            onChange={(e) => setSocialLinks({...socialLinks, instagram: e.target.value})}
+                          />
+                       </div>
+                       <div className="flex items-center gap-3 bg-zinc-950 p-4 rounded-2xl border border-zinc-800 text-zinc-400">
+                          <Send className="h-4 w-4" />
+                          <input 
+                            placeholder="Twitter handle" 
+                            className="bg-transparent text-sm focus:outline-none w-full" 
+                            value={socialLinks.twitter}
+                            onChange={(e) => setSocialLinks({...socialLinks, twitter: e.target.value})}
+                          />
+                       </div>
+                       <div className="flex items-center gap-3 bg-zinc-950 p-4 rounded-2xl border border-zinc-800 text-zinc-400">
+                          <Briefcase className="h-4 w-4" />
+                          <input 
+                            placeholder="LinkedIn URL" 
+                            className="bg-transparent text-sm focus:outline-none w-full" 
+                            value={socialLinks.linkedin}
+                            onChange={(e) => setSocialLinks({...socialLinks, linkedin: e.target.value})}
+                          />
+                       </div>
+                       <div className="flex items-center gap-3 bg-zinc-950 p-4 rounded-2xl border border-zinc-800 text-zinc-400">
+                          <Code className="h-4 w-4" />
+                          <input 
+                            placeholder="GitHub username" 
+                            className="bg-transparent text-sm focus:outline-none w-full" 
+                            value={socialLinks.github}
+                            onChange={(e) => setSocialLinks({...socialLinks, github: e.target.value})}
+                          />
+                       </div>
+                    </div>
+                  </div>
+
                   <div className="space-y-4">
                     <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">
-                      <Layout className="h-3 w-3" /> Biography
+                    <LayoutDashboard className="h-3 w-3" /> Biography
                     </label>
                     <textarea
                       value={bio}
@@ -308,8 +427,7 @@ export default function ProfilePage() {
                        multiple 
                        className="hidden" 
                        onChange={(e) => {
-                         setGalleryFiles(e.target.files);
-                         if (e.target.files?.length) uploadMedia("gallery");
+                         if (e.target.files?.length) uploadMedia("gallery", e.target.files);
                        }} 
                      />
                   </div>

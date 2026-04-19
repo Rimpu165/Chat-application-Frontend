@@ -9,10 +9,12 @@ import toast from "react-hot-toast";
 import { 
   ArrowLeft, Plus, UserPlus, UserMinus, LogOut, 
   Trash2, Search, Camera, X, Users, Settings2, ShieldCheck,
-  MoreVertical, Edit3, CheckCircle2
+  MoreVertical, Edit3, CheckCircle2, LayoutGrid
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
+import { resolveMediaUrl } from "@/lib/utils";
+import ThemeToggle from "@/components/ThemeToggle";
 
 // Premium Skeleton Component
 const GroupSkeleton = () => (
@@ -246,17 +248,20 @@ export default function GroupsPage() {
         
         {/* Header */}
         <div className="flex items-center justify-between">
-          <motion.button
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            onClick={() => router.push("/chat")}
-            className="group flex items-center gap-2 text-chat-muted transition-colors hover:text-chat-text"
-          >
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-chat-surface border border-chat-border group-hover:border-chat-accent/50 group-hover:bg-chat-raised transition-all">
-              <ArrowLeft className="h-5 w-5" />
-            </div>
-            <span className="font-medium">Back to Chats</span>
-          </motion.button>
+          <div className="flex items-center gap-4">
+            <motion.button
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              onClick={() => router.push("/chat")}
+              className="group flex items-center gap-2 text-chat-muted transition-colors hover:text-chat-text"
+            >
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-chat-surface border border-chat-border group-hover:border-chat-accent/50 group-hover:bg-chat-raised transition-all">
+                <ArrowLeft className="h-5 w-5" />
+              </div>
+              <span className="font-medium">Back to Chats</span>
+            </motion.button>
+            <ThemeToggle />
+          </div>
 
           <motion.button
             initial={{ opacity: 0, scale: 0.9 }}
@@ -364,7 +369,7 @@ export default function GroupsPage() {
                             >
                               <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-chat-border bg-chat-surface">
                                 {f.profilePhoto ? (
-                                  <img src={`${process.env.NEXT_PUBLIC_API_URL?.replace("/api", "")}/${f.profilePhoto}`} alt="" className="h-full w-full object-cover" />
+                                  <img src={resolveMediaUrl(f.profilePhoto)} alt="" className="h-full w-full object-cover" />
                                 ) : (
                                   <div className="flex h-full items-center justify-center text-chat-muted font-bold bg-chat-raised text-xs">
                                     {f.name[0]}
@@ -453,7 +458,7 @@ export default function GroupsPage() {
                       {/* Avatar */}
                       <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-3xl border border-chat-border bg-chat-bg shadow-lg">
                         {room.groupImage ? (
-                          <img src={`${process.env.NEXT_PUBLIC_API_URL?.replace("/api", "")}/${room.groupImage}`} alt="" className="h-full w-full object-cover" />
+                          <img src={resolveMediaUrl(room.groupImage)} alt="" className="h-full w-full object-cover" />
                         ) : (
                           <div className="flex h-full items-center justify-center bg-gradient-to-br from-chat-accent/20 to-chat-surface text-3xl font-black text-chat-accent">
                             {room.name[0]}
@@ -511,7 +516,7 @@ export default function GroupsPage() {
                                <div key={p._id} className="relative group/p">
                                   <div className={`h-8 w-8 overflow-hidden rounded-xl bg-chat-bg border shrink-0 transition-all ${isOnline ? 'border-chat-success' : 'border-chat-border'}`} title={p.name}>
                                     {p.profilePhoto ? (
-                                        <img src={`${process.env.NEXT_PUBLIC_API_URL?.replace("/api", "")}/${p.profilePhoto}`} className="h-full w-full object-cover" />
+                                        <img src={resolveMediaUrl(p.profilePhoto)} className="h-full w-full object-cover" />
                                     ) : (
                                       <div className="flex h-full items-center justify-center text-[10px] font-bold uppercase">{p.name[0]}</div>
                                     )}
@@ -625,7 +630,7 @@ export default function GroupsPage() {
                                    <div key={p._id} className="flex items-center justify-between rounded-xl bg-chat-bg border border-chat-border p-2">
                                       <div className="flex items-center gap-2 overflow-hidden">
                                         <div className="relative h-7 w-7 rounded-lg bg-chat-surface border border-chat-border flex items-center justify-center text-[8px] overflow-hidden shrink-0">
-                                           {p.profilePhoto ? <img src={`${process.env.NEXT_PUBLIC_API_URL?.replace("/api", "")}/${p.profilePhoto}`} /> : <span>{p.name[0]}</span>}
+                                           {p.profilePhoto ? <img src={resolveMediaUrl(p.profilePhoto)} /> : <span>{p.name[0]}</span>}
                                            {onlineUsers.includes(p._id) && (
                                               <span className="absolute bottom-0 right-0 h-1.5 w-1.5 rounded-full bg-chat-success" />
                                            )}

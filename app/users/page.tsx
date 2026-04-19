@@ -17,13 +17,17 @@ import {
   Bell,
   Plus,
   X,
-  Undo2
+  Undo2,
+  LayoutGrid
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import UserProfileModal from "@/components/UserProfileModal";
+import { resolveMediaUrl } from "@/lib/utils";
+import Logo from "@/components/Logo";
+import ThemeToggle from "@/components/ThemeToggle";
 
 type FriendshipStatus = "none" | "sent" | "pending" | "friends" | "rejected";
 
@@ -52,7 +56,7 @@ function AvatarFallback({ name, src }: { name: string; src?: string }) {
   if (src && !error) {
     return (
         <img 
-            src={src} 
+            src={resolveMediaUrl(src)} 
             onError={() => setError(true)}
             className="w-16 h-16 rounded-[22px] object-cover ring-4 ring-zinc-800"
             alt={name}
@@ -201,42 +205,44 @@ export default function UsersPage() {
   if (loading || !user) return null;
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 overflow-hidden relative">
+    <div className="min-h-screen bg-chat-bg text-chat-text overflow-hidden relative">
       <div className="absolute top-0 right-0 w-[50%] h-[30%] bg-blue-500/5 blur-[120px] rounded-full pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-[50%] h-[30%] bg-purple-500/5 blur-[120px] rounded-full pointer-events-none" />
 
       {/* Sidebar (Shared Component-like structure) */}
-      <aside className="fixed left-0 top-0 bottom-0 w-20 lg:w-72 bg-zinc-900 border-r border-zinc-800 flex flex-col items-center lg:items-start p-6 z-20">
-         <div className="flex items-center gap-3 mb-10">
-            <div className="w-10 h-10 bg-gradient-to-tr from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-               <ShieldCheck className="w-6 h-6 text-white" />
-            </div>
-            <span className="text-xl font-bold hidden lg:block tracking-tighter">Nexora Network</span>
+      <aside className="fixed left-0 top-0 bottom-0 w-20 lg:w-72 bg-chat-surface border-r border-chat-border flex flex-col items-center lg:items-start p-6 z-20">
+         <div className="mb-10 lg:ml-2">
+            <Logo size="md" showText />
          </div>
 
          <nav className="flex-1 w-full space-y-2">
-            <Link href="/chat" className="w-full flex items-center justify-center lg:justify-start gap-4 px-4 py-3 rounded-2xl text-zinc-500 hover:bg-zinc-800 hover:text-white transition-all group">
+            <Link href="/chat" className="w-full flex items-center justify-center lg:justify-start gap-4 px-4 py-3 rounded-2xl text-chat-muted hover:bg-chat-raised hover:text-chat-text transition-all group">
                <MessageCircle className="w-6 h-6" />
                <span className="font-semibold hidden lg:block">Messages</span>
             </Link>
-            <Link href="/users" className="w-full flex items-center justify-center lg:justify-start gap-4 px-4 py-3 rounded-2xl bg-zinc-800 text-white font-semibold shadow-sm overflow-hidden relative group">
+            <Link href="/users" className="w-full flex items-center justify-center lg:justify-start gap-4 px-4 py-3 rounded-2xl bg-chat-raised text-chat-text font-semibold shadow-sm overflow-hidden relative group">
                <div className="absolute inset-0 bg-blue-500/10 blur-xl opacity-0 group-hover:opacity-100" />
-               <Users className="w-6 h-6 text-blue-500" />
+               <Users className="w-6 h-6 text-chat-accent" />
                <span className="hidden lg:block">Everyone</span>
             </Link>
-            <Link href="/requests" className="w-full flex items-center justify-center lg:justify-start gap-4 px-4 py-3 rounded-2xl text-zinc-500 hover:bg-zinc-800 hover:text-white transition-all group">
+            <Link href="/groups" className="w-full flex items-center justify-center lg:justify-start gap-4 px-4 py-3 rounded-2xl text-chat-muted hover:bg-chat-raised hover:text-chat-text transition-all group">
+               <LayoutGrid className="w-6 h-6" />
+               <span className="font-semibold hidden lg:block">Communities</span>
+            </Link>
+            <Link href="/requests" className="w-full flex items-center justify-center lg:justify-start gap-4 px-4 py-3 rounded-2xl text-chat-muted hover:bg-chat-raised hover:text-chat-text transition-all group">
                <Bell className="w-6 h-6" />
                <span className="font-semibold hidden lg:block">Requests</span>
             </Link>
             {user?.role === "admin" && (
-              <Link href="/admin" className="w-full flex items-center justify-center lg:justify-start gap-4 px-4 py-3 rounded-2xl text-zinc-500 hover:bg-zinc-800 hover:text-white transition-all group">
+              <Link href="/admin" className="w-full flex items-center justify-center lg:justify-start gap-4 px-4 py-3 rounded-2xl text-chat-muted hover:bg-chat-raised hover:text-chat-text transition-all group">
                 <ShieldAlert className="w-6 h-6" />
                 <span className="font-semibold hidden lg:block">Admin</span>
               </Link>
             )}
          </nav>
 
-         <div className="w-full space-y-4 pt-6 border-t border-zinc-800">
+         <div className="w-full space-y-4 pt-6 border-t border-chat-border">
+            <ThemeToggle />
             <button 
               onClick={logout}
               className="w-full flex items-center justify-center lg:justify-start gap-4 px-4 py-3 rounded-2xl text-red-500 hover:bg-red-500/10 transition-all font-semibold"

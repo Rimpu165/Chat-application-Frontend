@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import API from "@/lib/api";
 import { formatChatTime, formatLastSeen, previewFromLatestMessage } from "@/lib/format";
 import { cn, resolveMediaUrl } from "@/lib/utils";
-import { Search, Plus, MessageSquare, Users, Settings, Bell } from "lucide-react";
+import Logo from "@/components/Logo";
+import { Search, Plus, MessageSquare, Users, Settings, Bell, LayoutGrid } from "lucide-react";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 
@@ -208,7 +209,7 @@ export default function ChatSidebar({ onSelectRoom, selectedRoomId }: ChatSideba
     <aside className="flex h-full min-h-0 w-80 shrink-0 flex-col border-r border-chat-border bg-chat-surface/90 backdrop-blur-md">
       <div className="p-5">
         <div className="mb-7 flex items-center justify-between">
-          <h2 className="text-lg font-semibold tracking-tight text-chat-text">Chats</h2>
+           <Logo size="sm" showText />
           <div className="flex gap-2">
             <button 
               onClick={() => router.push("/requests")}
@@ -219,6 +220,13 @@ export default function ChatSidebar({ onSelectRoom, selectedRoomId }: ChatSideba
                {pendingRequests.length > 0 && (
                  <span className="absolute right-1 top-1 h-2 w-2 rounded-full border-2 border-chat-surface bg-chat-accent" />
                )}
+            </button>
+            <button 
+              onClick={() => router.push("/groups")}
+              title="Communities"
+              className="rounded-xl bg-chat-raised p-2 text-chat-muted transition-colors hover:bg-chat-border/60 hover:text-chat-text"
+            >
+               <LayoutGrid className="h-4 w-4" />
             </button>
             <button 
               onClick={() => router.push("/users")}

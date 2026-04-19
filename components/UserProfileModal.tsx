@@ -14,7 +14,12 @@ import {
   Lock,
   Loader2,
   Undo2,
-  Clock
+  Clock,
+  Camera,
+  Send,
+  Briefcase,
+  Code,
+  Heart
 } from "lucide-react";
 import API from "@/lib/api";
 import { resolveMediaUrl } from "@/lib/utils";
@@ -80,7 +85,7 @@ export default function UserProfileModal({ userId, onClose, onActionSuccess, isO
            initial={{ opacity: 0, scale: 0.9, y: 20 }}
            animate={{ opacity: 1, scale: 1, y: 0 }}
            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-           className="relative w-full max-w-2xl bg-zinc-900 rounded-[40px] border border-zinc-800 shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
+           className="relative w-full max-w-2xl bg-chat-surface rounded-[40px] border border-chat-border shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
         >
           {/* Close Button */}
           <button 
@@ -98,20 +103,20 @@ export default function UserProfileModal({ userId, onClose, onActionSuccess, isO
             <div className="overflow-y-auto custom-scrollbar flex-1">
               
               {/* Header/Cover */}
-              <div className="relative h-48 w-full bg-zinc-800">
+              <div className="relative h-48 w-full bg-chat-surface">
                 {profile.coverPhoto && !profile.isPrivate ? (
                   <img src={resolveMediaUrl(profile.coverPhoto)} className="h-full w-full object-cover opacity-60" />
                 ) : (
                   <div className="h-full w-full bg-gradient-to-tr from-blue-600/20 to-purple-800/20" />
                 )}
-                <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-zinc-900 to-transparent" />
+                <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-chat-surface to-transparent" />
               </div>
 
               {/* Profile Details */}
               <div className="px-8 pb-10 -mt-16 relative">
                  <div className="flex flex-col md:flex-row items-end gap-6 mb-8">
                     <div className="relative">
-                      <div className="h-32 w-32 rounded-[32px] border-[6px] border-zinc-900 bg-zinc-800 overflow-hidden shadow-xl">
+                      <div className="h-32 w-32 rounded-[32px] border-[6px] border-chat-surface bg-chat-surface overflow-hidden shadow-xl">
                         {profile.profilePhoto ? (
                           <img src={resolveMediaUrl(profile.profilePhoto)} className="h-full w-full object-cover" />
                         ) : (
@@ -121,7 +126,7 @@ export default function UserProfileModal({ userId, onClose, onActionSuccess, isO
                         )}
                       </div>
                       {isOnline && (
-                        <div className="absolute bottom-1 right-1 w-6 h-6 bg-emerald-500 rounded-full border-4 border-zinc-900 shadow-lg" />
+                        <div className="absolute bottom-1 right-1 w-6 h-6 bg-emerald-500 rounded-full border-4 border-chat-surface shadow-lg" />
                       )}
                     </div>
 
@@ -130,7 +135,7 @@ export default function UserProfileModal({ userId, onClose, onActionSuccess, isO
                         <h2 className="text-3xl font-black tracking-tighter uppercase">{profile.name}</h2>
                         {profile.isFriend && <ShieldCheck className="h-5 w-5 text-blue-500" />}
                       </div>
-                      <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest">
+                      <p className="text-xs font-bold text-chat-muted uppercase tracking-widest">
                         {profile.isPrivate ? 'Private Profile' : 'Nexora Citizen'}
                       </p>
                     </div>
@@ -138,13 +143,13 @@ export default function UserProfileModal({ userId, onClose, onActionSuccess, isO
 
                  {profile.isPrivate && !profile.isFriend ? (
                    /* Locked State */
-                   <div className="py-12 flex flex-col items-center text-center space-y-6 bg-zinc-950/40 rounded-[32px] border border-zinc-800/50">
+                   <div className="py-12 flex flex-col items-center text-center space-y-6 bg-chat-bg/40 rounded-[32px] border border-chat-border/50">
                       <div className="h-20 w-20 rounded-[32px] bg-amber-500/10 flex items-center justify-center text-amber-500">
                          <Lock className="h-10 w-10" />
                       </div>
                       <div className="space-y-2 max-w-xs">
                         <h3 className="text-xl font-bold uppercase tracking-tight">Profile Locked</h3>
-                        <p className="text-sm text-zinc-500 leading-relaxed">{profile.message || "This user's profile is private. Add them as a friend to see their gallery and details."}</p>
+                        <p className="text-sm text-chat-muted leading-relaxed">{profile.message || "This user's profile is private. Add them as a friend to see their gallery and details."}</p>
                       </div>
                       <button 
                         onClick={handleFriendAction}
@@ -159,34 +164,69 @@ export default function UserProfileModal({ userId, onClose, onActionSuccess, isO
                    /* Public / Friend State */
                    <div className="space-y-8">
                       {profile.bio && (
-                        <div className="p-6 bg-zinc-950/40 rounded-3xl border border-zinc-800/50">
+                        <div className="p-6 bg-chat-bg/40 rounded-3xl border border-chat-border/50">
                            <p className="text-sm font-medium text-zinc-300 italic">"{profile.bio}"</p>
                         </div>
                       )}
 
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                         <div className="bg-zinc-800/40 p-4 rounded-2xl border border-zinc-800">
-                            <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">Mutual Friends</p>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                         <div className="bg-chat-surface/40 p-4 rounded-2xl border border-chat-border">
+                            <p className="text-[10px] font-black text-chat-muted uppercase tracking-widest mb-1">Mutual Friends</p>
                             <p className="text-xl font-black">{profile.mutualFriendsCount || 0}</p>
                          </div>
-                         <div className="bg-zinc-800/40 p-4 rounded-2xl border border-zinc-800">
-                            <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">Joined</p>
-                            <p className="text-xl font-black">{new Date(profile.createdAt).getFullYear()}</p>
+                         <div className="bg-chat-surface/40 p-4 rounded-2xl border border-chat-border">
+                            <p className="text-[10px] font-black text-chat-muted uppercase tracking-widest mb-1">Age</p>
+                            <p className="text-xl font-black">{profile.age || '—'}</p>
                          </div>
-                         <div className="bg-zinc-800/40 p-4 rounded-2xl border border-zinc-800">
-                            <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">Items</p>
+                         <div className="bg-chat-surface/40 p-4 rounded-2xl border border-chat-border">
+                            <p className="text-[10px] font-black text-chat-muted uppercase tracking-widest mb-1">Gender</p>
+                            <p className="text-xl font-black">{profile.gender || '—'}</p>
+                         </div>
+                         <div className="bg-chat-surface/40 p-4 rounded-2xl border border-chat-border">
+                            <p className="text-[10px] font-black text-chat-muted uppercase tracking-widest mb-1">Items</p>
                             <p className="text-xl font-black">{profile.gallery?.length || 0}</p>
                          </div>
                       </div>
 
+                      {profile.location && (
+                        <div className="flex items-center gap-2 text-chat-muted text-sm font-medium">
+                           <MapPin className="h-4 w-4" /> {profile.location}
+                        </div>
+                      )}
+
+                      {profile.socialLinks && (
+                        <div className="flex gap-3">
+                           {profile.socialLinks.instagram && (
+                              <a href={`https://instagram.com/${profile.socialLinks.instagram}`} target="_blank" className="p-3 rounded-xl bg-chat-surface border border-zinc-700 hover:text-pink-500 transition-all">
+                                 <Camera className="h-5 w-5" />
+                              </a>
+                           )}
+                           {profile.socialLinks.twitter && (
+                              <a href={`https://twitter.com/${profile.socialLinks.twitter}`} target="_blank" className="p-3 rounded-xl bg-chat-surface border border-zinc-700 hover:text-blue-400 transition-all" rel="noreferrer">
+                                 <Send className="h-5 w-5" />
+                              </a>
+                           )}
+                           {profile.socialLinks.linkedin && (
+                              <a href={profile.socialLinks.linkedin} target="_blank" className="p-3 rounded-xl bg-chat-surface border border-zinc-700 hover:text-blue-600 transition-all" rel="noreferrer">
+                                 <Briefcase className="h-5 w-5" />
+                              </a>
+                           )}
+                           {profile.socialLinks.github && (
+                              <a href={`https://github.com/${profile.socialLinks.github}`} target="_blank" className="p-3 rounded-xl bg-chat-surface border border-zinc-700 hover:text-white transition-all" rel="noreferrer">
+                                 <Code className="h-5 w-5" />
+                              </a>
+                           )}
+                        </div>
+                      )}
+
                       {profile.gallery && profile.gallery.length > 0 && (
                         <div className="space-y-4">
-                           <h3 className="text-xs font-black uppercase tracking-[0.2em] text-zinc-500 flex items-center gap-2 font-black">
+                           <h3 className="text-xs font-black uppercase tracking-[0.2em] text-chat-muted flex items-center gap-2 font-black">
                              <ImageIcon className="h-4 w-4" /> Gallery Highlights
                            </h3>
                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                               {profile.gallery.map((img: string, i: number) => (
-                                <div key={i} className="aspect-square rounded-2xl overflow-hidden bg-zinc-800 border border-zinc-800 group cursor-pointer">
+                                <div key={i} className="aspect-square rounded-2xl overflow-hidden bg-chat-surface border border-chat-border group cursor-pointer">
                                   <img src={resolveMediaUrl(img)} alt="" className="h-full w-full object-cover transition-transform group-hover:scale-110" />
                                 </div>
                               ))}
@@ -194,7 +234,7 @@ export default function UserProfileModal({ userId, onClose, onActionSuccess, isO
                         </div>
                       )}
 
-                      <div className="flex gap-4 border-t border-zinc-800 pt-8">
+                      <div className="flex gap-4 border-t border-chat-border pt-8">
                          {profile.isFriend ? (
                            <button 
                              onClick={() => toast.success("Opening chat...")}

@@ -13,8 +13,38 @@
   --chat-text: #f5f7ff;
   --chat-muted: #9aa3bd;
   --chat-success: #22c55e;
+}
+
+.light {
+  --chat-bg: #f8fafc;
+  --chat-surface: #ffffff;
+  --chat-raised: #f1f5f9;
+  --chat-border: #e2e8f0;
+  --chat-accent: #4f46e5;
+  --chat-accent-dim: rgba(79, 70, 229, 0.08);
+  --chat-bubble-out: #4f46e5;
+  --chat-bubble-in: #f1f5f9;
+  --chat-text: #020617;
+  --chat-muted: #475569;
+  --chat-success: #059669;
+}
+
+.dark {
+  --chat-bg: #090b14;
+  --chat-surface: #111525;
+  --chat-raised: #191f34;
+  --chat-border: #2a3250;
+  --chat-accent: #8b5cf6;
+}
+
+:root {
   --background: var(--chat-bg);
   --foreground: var(--chat-text);
+}
+
+body {
+  background-color: var(--chat-bg);
+  color: var(--chat-text);
 }
 
 @theme {
@@ -33,14 +63,11 @@
   --color-chat-success: var(--chat-success);
 }
 
-html {
-  color-scheme: dark;
-}
-
 body {
   background-color: var(--chat-bg);
   color: var(--chat-text);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Allow selecting text in inputs and message content */

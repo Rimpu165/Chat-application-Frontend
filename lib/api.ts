@@ -14,7 +14,8 @@ API.interceptors.request.use((config) => {
   return config;
 });
 
-/** Session expired or invalid token — avoid redirect on login/signup failures */
+let isRedirecting = false;
+
 API.interceptors.response.use(
   (res) => res,
   (error) => {
@@ -25,13 +26,17 @@ API.interceptors.response.use(
       url.includes("/auth/login") ||
       url.includes("/auth/signup") ||
       url.includes("/auth/register");
-    if (status === 401 && !isAuthAttempt) {
+
+    if (status === 401 && !isAuthAttempt && !isRedirecting) {
+      isRedirecting = true;
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       const path = window.location.pathname;
       if (!path.startsWith("/login") && !path.startsWith("/signup")) {
-        window.location.assign("/login");
+        window.location.replace("/login");
       }
+      // Reset flag after a delay to allow page transition
+      setTimeout(() => { isRedirecting = false; }, 3000);
     }
     return Promise.reject(error);
   }

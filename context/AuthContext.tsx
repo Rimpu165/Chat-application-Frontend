@@ -11,8 +11,23 @@ interface User {
   email: string;
   role: "user" | "admin";
   profilePhoto?: string;
+  coverPhoto?: string;
+  bio?: string;
   status: "online" | "offline";
   isBlocked: boolean;
+  isPrivate: boolean;
+  gallery: string[];
+  friends: string[];
+  age?: number;
+  gender: "Male" | "Female" | "Other" | "Secret";
+  location?: string;
+  socialLinks?: {
+    instagram?: string;
+    twitter?: string;
+    github?: string;
+    linkedin?: string;
+  };
+  createdAt: string;
 }
 
 interface AuthContextType {
@@ -22,7 +37,7 @@ interface AuthContextType {
   login: (data: any) => Promise<void>;
   signup: (data: any, photoFile?: File | null) => Promise<void>;
   logout: () => void;
-  updateUser: (data: Partial<User>) => void;
+  updateUser: (data: any) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
