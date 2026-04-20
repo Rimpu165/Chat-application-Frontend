@@ -37,7 +37,7 @@ export default function Logo({ className, size = "md", showText = false }: LogoP
       </div>
       {showText && (
         <span className={cn(
-          "font-black tracking-tighter text-white uppercase",
+          "font-black tracking-tighter text-chat-text uppercase",
           size === "sm" ? "text-sm" : size === "md" ? "text-xl" : "text-3xl"
         )}>
           Nexora <span className="text-chat-accent">Chat</span>

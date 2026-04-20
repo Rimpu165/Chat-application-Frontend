@@ -240,7 +240,7 @@ export default function GroupsPage() {
   const { onlineUsers } = useSocket();
 
   return (
-    <div className="relative min-h-screen bg-chat-bg text-chat-text overflow-hidden">
+    <div className="relative min-h-screen bg-chat-bg text-chat-text overflow-hidden pt-24">
       {/* Animated Aura Background */}
       <div className="absolute inset-0 animate-aura pointer-events-none z-0" />
       
@@ -260,7 +260,6 @@ export default function GroupsPage() {
               </div>
               <span className="font-medium">Back to Chats</span>
             </motion.button>
-            <ThemeToggle />
           </div>
 
           <motion.button

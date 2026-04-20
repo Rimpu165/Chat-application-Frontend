@@ -8,6 +8,7 @@ import ChatWindow from "@/components/ChatWindow";
 import API from "@/lib/api";
 import { Building2, Plus, MessageSquare, Users } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 function ChatPageInner() {
   const { user, token, loading } = useAuth();
@@ -43,7 +44,10 @@ function ChatPageInner() {
   if (loading || !user || !token) return null;
 
   return (
-    <div className="flex h-screen min-h-0 flex-col overflow-hidden bg-chat-bg font-sans text-chat-text">
+    <div className="flex h-screen min-h-0 flex-col overflow-hidden bg-chat-bg font-sans text-chat-text pt-20 relative">
+      {/* Immersive Background */}
+      <div className="absolute inset-0 animate-aura pointer-events-none opacity-40" />
+
       <div className="relative z-10 flex h-full min-h-0 w-full transition-all duration-500">
         <ChatSidebar onSelectRoom={setSelectedRoom} selectedRoomId={selectedRoom?._id as string | undefined} />
 
@@ -62,55 +66,93 @@ function ChatPageInner() {
               </motion.div>
             ) : (
               <motion.div
-                initial={{ opacity: 0, scale: 0.98 }}
-                animate={{ opacity: 1, scale: 1 }}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
                 className="relative flex flex-1 flex-col items-center justify-center overflow-hidden p-6 text-center sm:p-8"
               >
-                <div className="pointer-events-none absolute left-1/2 top-1/2 h-[min(90vw,28rem)] w-[min(90vw,28rem)] -translate-x-1/2 -translate-y-1/2 rounded-full bg-chat-accent/10 blur-[100px]" />
+                {/* Dynamic Background Elements */}
+                <div className="absolute inset-0 pointer-events-none">
+                  <div className="absolute left-1/4 top-1/4 h-96 w-96 rounded-full bg-chat-accent/10 blur-[120px] animate-pulse" />
+                  <div className="absolute right-1/4 bottom-1/4 h-96 w-96 rounded-full bg-blue-500/10 blur-[120px] animate-pulse delay-700" />
+                </div>
 
-                <div className="relative mb-10">
-                  <div className="absolute inset-0 rounded-3xl bg-chat-accent/20 blur-2xl" />
-                  <div className="relative rounded-3xl border border-chat-border bg-chat-surface/80 p-8 shadow-xl backdrop-blur-xl">
-                    <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-chat-accent text-chat-bg shadow-lg shadow-chat-accent/30">
-                      <MessageSquare className="h-9 w-9" />
+                <div className="relative max-w-2xl w-full">
+                  <motion.div 
+                    initial={{ scale: 0.9 }}
+                    animate={{ scale: 1 }}
+                    className="relative group mb-12"
+                  >
+                    <div className="absolute -inset-1 bg-gradient-to-r from-chat-accent via-blue-500 to-purple-500 rounded-[40px] blur opacity-20 group-hover:opacity-40 transition duration-1000" />
+                    <div className="relative rounded-[40px] border border-chat-border/50 bg-chat-surface/40 p-12 backdrop-blur-3xl shadow-2xl">
+                      <div className="mx-auto mb-8 flex h-24 w-24 items-center justify-center rounded-[32px] bg-gradient-to-br from-chat-accent to-blue-600 text-white shadow-2xl shadow-chat-accent/40 transform -rotate-6 group-hover:rotate-0 transition-transform duration-500">
+                        <MessageSquare className="h-12 w-12" />
+                      </div>
+                      
+                      <h1 className="mb-4 text-4xl md:text-5xl font-black tracking-tighter text-chat-text">
+                        Welcome, <span className="bg-gradient-to-r from-chat-accent to-blue-500 bg-clip-text text-transparent">{user.name}</span>
+                      </h1>
+                      
+                      <p className="mx-auto max-w-sm text-base font-medium leading-relaxed text-chat-muted">
+                        Select a conversation from your left or start a brand new journey with your friends.
+                      </p>
+
+                      <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
+                         <div className="px-6 py-2 rounded-full bg-chat-raised/50 border border-chat-border text-xs font-bold text-chat-accent uppercase tracking-widest">
+                            Real-time Syncing
+                         </div>
+                         <div className="px-6 py-2 rounded-full bg-chat-raised/50 border border-chat-border text-xs font-bold text-blue-500 uppercase tracking-widest">
+                            Secure Calls
+                         </div>
+                      </div>
                     </div>
-                    <h1 className="mb-2 text-2xl font-semibold tracking-tight sm:text-3xl">Hi, {user.name}</h1>
-                    <p className="mx-auto max-w-xs text-sm leading-relaxed text-chat-muted">
-                      Pick a chat from the list or start a new conversation — everything syncs live.
-                    </p>
+                  </motion.div>
+
+                  <div className="grid grid-cols-2 gap-6">
+                    {[
+                      { 
+                        title: "Directory", 
+                        desc: "Find and follow people", 
+                        icon: <Users className="w-6 h-6" />, 
+                        href: "/users",
+                        color: "from-blue-500/20"
+                      },
+                      { 
+                        title: "Communities", 
+                        desc: "Join global groups", 
+                        icon: <Building2 className="w-6 h-6" />, 
+                        href: "/groups",
+                         color: "from-purple-500/20"
+                      }
+                    ].map((item, i) => (
+                      <motion.button
+                        key={item.title}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.1 * (i + 1) }}
+                        onClick={() => router.push(item.href)}
+                        className="group relative flex flex-col items-center gap-4 rounded-[32px] border border-chat-border bg-chat-surface/40 p-6 transition-all hover:scale-105 hover:bg-chat-raised hover:border-chat-accent/50 shadow-lg backdrop-blur-xl"
+                      >
+                        <div className={cn("rounded-2xl p-4 bg-gradient-to-br transition-all group-hover:scale-110", item.color, "to-transparent text-chat-text")}>
+                          {item.icon}
+                        </div>
+                        <div className="space-y-1">
+                           <span className="block text-sm font-black text-chat-text">{item.title}</span>
+                           <span className="block text-[10px] font-medium text-chat-muted">{item.desc}</span>
+                        </div>
+                      </motion.button>
+                    ))}
                   </div>
-                </div>
 
-                <div className="relative grid w-full max-w-sm grid-cols-2 gap-3">
-                  <button
-                    type="button"
+                  <motion.button
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.4 }}
                     onClick={() => router.push("/users")}
-                    className="group flex flex-col items-center gap-2 rounded-2xl border border-chat-border bg-chat-surface/90 p-4 transition-all hover:border-chat-accent/40 hover:bg-chat-raised"
+                    className="mt-12 inline-flex items-center gap-3 rounded-2xl bg-chat-text px-8 py-4 text-sm font-black text-chat-bg shadow-xl transition-all hover:scale-105 active:scale-95 hover:shadow-chat-text/20"
                   >
-                    <div className="rounded-xl bg-chat-accent-dim p-2 text-chat-accent transition-colors group-hover:bg-chat-accent/25">
-                      <Users className="h-5 w-5" />
-                    </div>
-                    <span className="text-xs font-semibold text-chat-muted group-hover:text-chat-text">People</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => router.push("/groups")}
-                    className="group flex flex-col items-center gap-2 rounded-2xl border border-chat-border bg-chat-surface/90 p-4 transition-all hover:border-chat-accent/40 hover:bg-chat-raised"
-                  >
-                    <div className="rounded-xl bg-chat-accent-dim p-2 text-chat-accent transition-colors group-hover:bg-chat-accent/25">
-                      <Building2 className="h-5 w-5" />
-                    </div>
-                    <span className="text-xs font-semibold text-chat-muted group-hover:text-chat-text">Groups</span>
-                  </button>
+                    <Plus className="h-5 w-5" /> Start New Message
+                  </motion.button>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={() => router.push("/users")}
-                  className="mt-6 inline-flex items-center gap-2 rounded-full border border-chat-border bg-chat-raised px-5 py-2.5 text-sm font-medium text-chat-text transition-colors hover:border-chat-accent/50 hover:text-chat-accent"
-                >
-                  <Plus className="h-4 w-4" /> New message
-                </button>
               </motion.div>
             )}
           </AnimatePresence>

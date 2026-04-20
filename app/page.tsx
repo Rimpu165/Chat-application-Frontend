@@ -39,25 +39,6 @@ export default function Home() {
         <div className="absolute top-0 right-0 w-[50%] h-[40%] bg-blue-600/5 blur-[120px] rounded-full pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-[30%] h-[40%] bg-purple-600/5 blur-[120px] rounded-full pointer-events-none" />
 
-        {/* Global Nav */}
-        <nav className={`fixed inset-x-0 top-0 z-50 flex items-center justify-between px-6 py-4 transition-all ${scrolled ? 'bg-chat-surface/80 backdrop-blur-xl border-b border-chat-border' : ''}`}>
-           <Link href="/">
-             <Logo size="md" showText />
-           </Link>
-           <div className="flex items-center gap-3">
-             <ThemeToggle />
-             <Link href="/profile" className="flex items-center gap-3 px-3 py-1.5 rounded-2xl bg-chat-surface border border-chat-border hover:border-chat-accent/50 transition-all">
-                <div className="h-7 w-7 rounded-lg overflow-hidden bg-chat-raised">
-                   {user.profilePhoto ? <img src={resolveMediaUrl(user.profilePhoto)} className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-xs font-bold">{user.name[0]}</div>}
-                </div>
-                <span className="text-sm font-semibold hidden md:block">{user.name}</span>
-             </Link>
-             <button onClick={logout} className="p-2 text-chat-muted hover:text-red-400 transition-colors">
-                <Activity className="h-5 w-5" />
-             </button>
-           </div>
-        </nav>
-
         <main className="max-w-7xl mx-auto px-6 pt-32 pb-20">
            
            <header className="mb-12">
@@ -73,7 +54,7 @@ export default function Home() {
                  <Link href="/chat" className="flex items-center gap-3 px-8 h-14 rounded-3xl bg-blue-600 text-white font-black text-lg hover:bg-blue-500 transition-all shadow-xl shadow-blue-600/20 active:scale-95 group">
                     <MessageSquare className="h-5 w-5 group-hover:rotate-12 transition-transform" /> Chat Now
                  </Link>
-                 <Link href="/users" className="flex items-center gap-3 px-8 h-14 rounded-3xl bg-chat-raised border border-chat-border text-white font-black text-lg hover:bg-chat-surface transition-all active:scale-95 group">
+                 <Link href="/users" className="flex items-center gap-3 px-8 h-14 rounded-3xl bg-chat-raised border border-chat-border text-chat-text font-black text-lg hover:bg-chat-surface transition-all active:scale-95 group">
                     <Users className="h-5 w-5 group-hover:scale-110 transition-transform" /> Explore People
                  </Link>
               </div>
@@ -131,12 +112,12 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="p-8 rounded-[40px] bg-linear-to-br from-blue-600 to-indigo-600 text-chat-text flex flex-col justify-center relative overflow-hidden active:scale-[0.98] cursor-pointer" onClick={() => router.push("/chat")}>
+              <div className="p-8 rounded-[40px] bg-linear-to-br from-blue-600 to-indigo-600 text-white flex flex-col justify-center relative overflow-hidden active:scale-[0.98] cursor-pointer" onClick={() => router.push("/chat")}>
                  <div className="absolute -right-4 -bottom-4 opacity-10">
                     <Globe className="h-32 w-32" />
                  </div>
                  <h3 className="text-xl font-black mb-1">Chat Home</h3>
-                 <p className="text-chat-text/70 text-xs">Jump back into your messages.</p>
+                 <p className="text-white/70 text-xs">Jump back into your messages.</p>
               </div>
 
            </div>

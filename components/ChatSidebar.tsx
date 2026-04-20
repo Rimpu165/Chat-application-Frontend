@@ -7,9 +7,10 @@ import API from "@/lib/api";
 import { formatChatTime, formatLastSeen, previewFromLatestMessage } from "@/lib/format";
 import { cn, resolveMediaUrl } from "@/lib/utils";
 import Logo from "@/components/Logo";
-import { Search, Plus, MessageSquare, Users, Settings, Bell, LayoutGrid } from "lucide-react";
+import { Search, MessageSquare, Settings, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface ChatSidebarProps {
   onSelectRoom: (room: any) => void;
@@ -210,32 +211,6 @@ export default function ChatSidebar({ onSelectRoom, selectedRoomId }: ChatSideba
       <div className="p-5">
         <div className="mb-7 flex items-center justify-between">
            <Logo size="sm" showText />
-          <div className="flex gap-2">
-            <button 
-              onClick={() => router.push("/requests")}
-              title="Open requests"
-              className="relative rounded-xl bg-chat-raised p-2 text-chat-muted transition-colors hover:bg-chat-border/60 hover:text-chat-text"
-            >
-               <Bell className="h-4 w-4" />
-               {pendingRequests.length > 0 && (
-                 <span className="absolute right-1 top-1 h-2 w-2 rounded-full border-2 border-chat-surface bg-chat-accent" />
-               )}
-            </button>
-            <button 
-              onClick={() => router.push("/groups")}
-              title="Communities"
-              className="rounded-xl bg-chat-raised p-2 text-chat-muted transition-colors hover:bg-chat-border/60 hover:text-chat-text"
-            >
-               <LayoutGrid className="h-4 w-4" />
-            </button>
-            <button 
-              onClick={() => router.push("/users")}
-              title="Find people"
-              className="rounded-xl bg-chat-accent p-2 text-chat-bg shadow-md shadow-chat-accent/25 transition-transform hover:scale-[1.02] active:scale-[0.98]"
-            >
-               <Plus className="h-4 w-4" />
-            </button>
-          </div>
         </div>
 
         <div className="relative mb-5">
@@ -298,65 +273,62 @@ export default function ChatSidebar({ onSelectRoom, selectedRoomId }: ChatSideba
                   onSelectRoom(room);
                 }}
                 className={cn(
-                  "group flex w-full items-center gap-3 rounded-2xl p-3 text-left transition-all",
+                  "group relative flex w-full items-center gap-4 rounded-[2rem] p-4 text-left transition-all duration-300",
                   selectedRoomId === room._id
-                    ? "bg-chat-accent-dim ring-1 ring-chat-accent/50"
-                    : "hover:bg-chat-raised/80"
+                    ? "bg-chat-accent/10 border border-chat-accent/20 shadow-lg shadow-chat-accent/5"
+                    : "hover:bg-chat-surface/40 border border-transparent"
                 )}
               >
+                {selectedRoomId === room._id && (
+                  <motion.div 
+                    layoutId="sidebar-active"
+                    className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-chat-accent rounded-r-full"
+                  />
+                )}
+
                 <div className="relative shrink-0">
-                  {photoUrl && !room.isBlocked ? (
-                    <img
-                      src={photoUrl}
-                      alt=""
-                      className={cn(
-                        "h-12 w-12 rounded-2xl object-cover ring-2",
-                        selectedRoomId === room._id ? "ring-chat-accent/50" : "ring-chat-border"
-                      )}
-                    />
-                  ) : (
-                    <div
-                      className={cn(
-                        "flex h-12 w-12 items-center justify-center rounded-2xl text-lg font-bold",
-                        selectedRoomId === room._id ? "bg-chat-accent/25 text-chat-accent" : "bg-chat-raised text-chat-muted"
-                      )}
-                    >
-                      {name[0]}
-                    </div>
-                  )}
+                  <div className="h-14 w-14 rounded-2xl overflow-hidden ring-2 ring-chat-border group-hover:ring-chat-accent/30 transition-all shadow-md">
+                    {photoUrl && !room.isBlocked ? (
+                      <img src={photoUrl} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center bg-chat-raised text-xl font-black text-chat-muted">
+                        {name[0]}
+                      </div>
+                    )}
+                  </div>
                   {!room.isGroup && isOnline && (
-                    <span className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-[3px] border-chat-surface bg-chat-success" />
+                    <span className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full border-[3px] border-chat-surface bg-chat-success shadow-sm" />
                   )}
                 </div>
                 
                 <div className="flex-1 text-left overflow-hidden">
-                  <div className="flex justify-between items-center mb-0.5">
+                  <div className="flex justify-between items-center mb-1">
                     <span className={cn(
-                      "truncate font-medium",
+                      "truncate font-black text-sm tracking-tight",
                       selectedRoomId === room._id ? "text-chat-text" : "text-chat-text"
                     )}>
                       {name}
                     </span>
-                    <div className="ml-2 flex items-center gap-2">
-                      <span className={cn(
-                        "text-[10px] tabular-nums text-chat-muted",
-                        selectedRoomId === room._id && "text-chat-accent/90"
-                      )}>
-                        {lastAt}
-                      </span>
-                      {Number(room.unreadCount || 0) > 0 && (
-                        <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-chat-accent px-1.5 py-0.5 text-[10px] font-bold leading-none text-chat-bg">
-                          {Number(room.unreadCount) > 99 ? "99+" : Number(room.unreadCount)}
-                        </span>
-                      )}
-                    </div>
+                    <span className={cn(
+                      "text-[10px] tabular-nums font-bold",
+                      selectedRoomId === room._id ? "text-chat-accent" : "text-chat-muted"
+                    )}>
+                      {lastAt}
+                    </span>
                   </div>
-                  <p className={cn(
-                    "truncate text-xs text-chat-muted",
-                    selectedRoomId === room._id && "text-chat-text/80"
-                  )}>
-                    {room.isBlocked ? "Blocked chat" : lastMsg}
-                  </p>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className={cn(
+                      "truncate text-xs font-medium flex-1",
+                      selectedRoomId === room._id ? "text-chat-text/80" : "text-chat-muted"
+                    )}>
+                      {room.isBlocked ? "Blocked chat" : lastMsg}
+                    </p>
+                    {Number(room.unreadCount || 0) > 0 && (
+                      <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-chat-accent px-1.5 text-[10px] font-black leading-none text-chat-bg shadow-lg shadow-chat-accent/20">
+                        {Number(room.unreadCount) > 99 ? "99+" : Number(room.unreadCount)}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </button>
             );
