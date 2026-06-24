@@ -240,7 +240,7 @@ export default function GroupsPage() {
   const { onlineUsers } = useSocket();
 
   return (
-    <div className="relative min-h-screen bg-chat-bg text-chat-text overflow-hidden pt-24">
+    <div className="relative min-h-screen bg-chat-bg text-chat-text overflow-x-hidden pt-24">
       {/* Animated Aura Background */}
       <div className="absolute inset-0 animate-aura pointer-events-none z-0" />
       

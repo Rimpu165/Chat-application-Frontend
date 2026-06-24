@@ -48,7 +48,7 @@ function ChatPageInner() {
       {/* Immersive Background */}
       <div className="absolute inset-0 animate-aura pointer-events-none opacity-40" />
 
-      <div className="relative z-10 flex h-full min-h-0 w-full transition-all duration-500">
+      <div className="relative z-10 flex flex-1 min-h-0 w-full transition-all duration-500">
         <ChatSidebar onSelectRoom={setSelectedRoom} selectedRoomId={selectedRoom?._id as string | undefined} />
 
         <div className="relative flex h-full min-h-0 flex-1 flex-col bg-chat-bg">
@@ -68,7 +68,7 @@ function ChatPageInner() {
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="relative flex flex-1 flex-col items-center justify-center overflow-hidden p-6 text-center sm:p-8"
+                className="relative flex flex-1 flex-col items-center justify-start overflow-y-auto p-6 text-center sm:p-8 custom-scrollbar"
               >
                 {/* Dynamic Background Elements */}
                 <div className="absolute inset-0 pointer-events-none">
@@ -76,7 +76,7 @@ function ChatPageInner() {
                   <div className="absolute right-1/4 bottom-1/4 h-96 w-96 rounded-full bg-blue-500/10 blur-[120px] animate-pulse delay-700" />
                 </div>
 
-                <div className="relative max-w-2xl w-full">
+                <div className="relative max-w-2xl w-full my-auto py-8">
                   <motion.div 
                     initial={{ scale: 0.9 }}
                     animate={{ scale: 1 }}

@@ -142,7 +142,7 @@ export default function RequestsPage() {
   if (loading || !user) return null;
 
   return (
-    <div className="min-h-screen bg-chat-bg text-chat-text overflow-hidden relative pt-24">
+    <div className="min-h-screen bg-chat-bg text-chat-text overflow-x-hidden relative pt-24">
       <div className="absolute top-0 right-0 w-[40%] h-[40%] bg-blue-500/5 blur-[120px] rounded-full pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-[30%] h-[40%] bg-purple-500/5 blur-[120px] rounded-full pointer-events-none" />
 

@@ -205,7 +205,7 @@ export default function UsersPage() {
   if (loading || !user) return null;
 
   return (
-    <div className="min-h-screen bg-chat-bg text-chat-text overflow-hidden relative pt-24">
+    <div className="min-h-screen bg-chat-bg text-chat-text overflow-x-hidden relative pt-24">
       <div className="absolute top-0 right-0 w-[50%] h-[30%] bg-blue-500/5 blur-[120px] rounded-full pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-[50%] h-[30%] bg-purple-500/5 blur-[120px] rounded-full pointer-events-none" />
 
