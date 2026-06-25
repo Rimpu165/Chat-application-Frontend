@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* Nexora — midnight dark theme (indigo depth + violet accent) */
 :root {
   --chat-bg: #090b14;
