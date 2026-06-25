@@ -11,8 +11,23 @@ interface User {
   email: string;
   role: "user" | "admin";
   profilePhoto?: string;
+  coverPhoto?: string;
+  bio?: string;
   status: "online" | "offline";
   isBlocked: boolean;
+  isPrivate: boolean;
+  gallery: string[];
+  friends: string[];
+  age?: number;
+  gender: "Male" | "Female" | "Other" | "Secret";
+  location?: string;
+  socialLinks?: {
+    instagram?: string;
+    twitter?: string;
+    github?: string;
+    linkedin?: string;
+  };
+  createdAt: string;
 }
 
 interface AuthContextType {
@@ -20,9 +35,9 @@ interface AuthContextType {
   token: string | null;
   loading: boolean;
   login: (data: any) => Promise<void>;
-  signup: (data: any) => Promise<void>;
+  signup: (data: any, photoFile?: File | null) => Promise<void>;
   logout: () => void;
-  updateUser: (data: Partial<User>) => void;
+  updateUser: (data: any) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -62,9 +77,35 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const signup = async (data: any) => {
+  const signup = async (data: any, photoFile?: File | null) => {
     try {
       await API.post("/auth/signup", data);
+      if (photoFile) {
+        const loginRes = await API.post("/auth/login", {
+          email: data.email,
+          password: data.password,
+        });
+        const accessToken = loginRes.data.token;
+        localStorage.setItem("token", accessToken);
+        localStorage.setItem("user", JSON.stringify(loginRes.data.user));
+        setToken(accessToken);
+        setUser(loginRes.data.user);
+
+        const formData = new FormData();
+        formData.append("photo", photoFile);
+        const uploadRes = await API.post("/users/profile-photo", formData, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+        const updatedUser = uploadRes.data?.user || loginRes.data.user;
+        setUser(updatedUser);
+        localStorage.setItem("user", JSON.stringify(updatedUser));
+        toast.success("Account created with profile photo!");
+        router.push("/chat");
+        return;
+      }
+
       toast.success("Account created! Please login.");
       router.push("/login");
     } catch (error: any) {

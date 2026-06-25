@@ -18,11 +18,14 @@ import {
   LogOut,
   RefreshCcw,
   CheckCircle2,
-  XCircle
+  XCircle,
+  MessageCircle
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
+import Logo from "@/components/Logo";
+import ThemeToggle from "@/components/ThemeToggle";
 
 interface Stats {
   totalUsers: number;
@@ -42,7 +45,7 @@ interface User {
 
 interface Room {
   _id: string;
-  groupName?: string;
+  name?: string;
   isGroup: boolean;
   participants: any[];
   admin?: any;
@@ -135,66 +138,85 @@ export default function AdminDashboard() {
   );
 
   const filteredRooms = rooms.filter(r => 
-    (r.groupName?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+    (r.name?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
     r.participants.some(p => (p.name?.toLowerCase() || "").includes(searchTerm.toLowerCase()))
   );
 
   if (loading || !user) return null;
 
   return (
-    <div className="flex h-screen bg-zinc-950 text-zinc-100 overflow-hidden">
+    <div className="flex h-screen bg-chat-bg text-chat-text overflow-hidden">
       {/* Sidebar */}
-      <aside className="w-64 bg-zinc-900 border-r border-zinc-800 flex flex-col p-6 hidden lg:flex">
-        <div className="flex items-center gap-3 mb-12">
-          <div className="bg-blue-600 p-2 rounded-xl">
-            <ShieldAlert className="w-6 h-6" />
-          </div>
-          <span className="text-xl font-bold">Admin Panel</span>
+      <aside className="w-64 bg-chat-surface border-r border-chat-border flex flex-col p-6 hidden lg:flex">
+        <div className="mb-12">
+           <Logo size="md" showText />
         </div>
 
         <nav className="flex-1 space-y-2">
           <button 
+             onClick={() => router.push("/chat")}
+             className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-chat-muted hover:bg-chat-raised/50 hover:text-chat-text transition-all"
+          >
+            <MessageSquare className="w-5 h-5" /> Messages
+          </button>
+          <button 
+             onClick={() => router.push("/users")}
+             className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-chat-muted hover:bg-chat-raised/50 hover:text-chat-text transition-all"
+          >
+            <Users className="w-5 h-5" /> Everything
+          </button>
+          <button 
+             onClick={() => router.push("/groups")}
+             className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-chat-muted hover:bg-chat-raised/50 hover:text-chat-text transition-all"
+          >
+            <LayoutDashboard className="w-5 h-5" /> Communities
+          </button>
+          <div className="my-4 border-t border-chat-border" />
+          <button 
             onClick={() => setActiveTab("users")}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-              activeTab === "users" ? "bg-zinc-800 text-white font-medium" : "text-zinc-500 hover:bg-zinc-800/50 hover:text-white"
+              activeTab === "users" ? "bg-chat-raised text-chat-text font-medium" : "text-chat-muted hover:bg-chat-raised/50 hover:text-chat-text"
             }`}
           >
-            <Users className="w-5 h-5" /> Users
+            <Users className="w-5 h-5" /> Admin: Users
           </button>
           <button 
              onClick={() => setActiveTab("rooms")}
              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-               activeTab === "rooms" ? "bg-zinc-800 text-white font-medium" : "text-zinc-500 hover:bg-zinc-800/50 hover:text-white"
+               activeTab === "rooms" ? "bg-chat-raised text-chat-text font-medium" : "text-chat-muted hover:bg-chat-raised/50 hover:text-chat-text"
              }`}
           >
-            <MessageSquare className="w-5 h-5" /> Rooms
+            <MessageCircle className="w-5 h-5" /> Admin: Rooms
           </button>
-          <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-zinc-500 hover:bg-zinc-800/50 hover:text-white transition-all">
+          <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-chat-muted hover:bg-chat-raised/50 hover:text-chat-text transition-all">
             <Settings className="w-5 h-5" /> Settings
           </button>
         </nav>
 
-        <button 
-          onClick={logout}
-          className="flex items-center gap-3 px-4 py-3 rounded-xl text-red-500 hover:bg-red-500/10 transition-all font-medium"
-        >
-          <LogOut className="w-5 h-5" /> Logout
-        </button>
+        <div className="space-y-4">
+           <ThemeToggle />
+           <button 
+             onClick={logout}
+             className="w-full flex items-center justify-center lg:justify-start gap-4 px-4 py-3 rounded-2xl text-red-500 hover:bg-red-500/10 transition-all font-semibold"
+           >
+             <LogOut className="w-5 h-5" /> Logout
+           </button>
+        </div>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto bg-black p-6 md:p-10 relative">
+      <main className="flex-1 overflow-y-auto bg-chat-bg p-6 md:p-10 relative">
         <div className="absolute top-0 right-0 w-[40%] h-[30%] bg-blue-500/5 blur-[100px] rounded-full pointer-events-none" />
 
         <div className="max-w-6xl mx-auto">
           <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
             <div>
               <h1 className="text-4xl font-bold tracking-tight mb-2">System Overview</h1>
-              <p className="text-zinc-500">Manage your application performance and users.</p>
+              <p className="text-chat-muted">Manage your application performance and users.</p>
             </div>
             <button 
               onClick={fetchData}
-              className="flex items-center gap-2 px-6 py-3 bg-zinc-900 border border-zinc-800 rounded-2xl hover:border-zinc-700 transition-all"
+              className="flex items-center gap-2 px-6 py-3 bg-chat-surface border border-chat-border rounded-2xl hover:border-zinc-700 transition-all"
             >
               <RefreshCcw className={`w-4 h-4 ${isDataLoading ? 'animate-spin' : ''}`} /> Refresh
             </button>
@@ -212,7 +234,7 @@ export default function AdminDashboard() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.1 }}
-                className="p-8 rounded-3xl bg-zinc-900/50 border border-zinc-800 backdrop-blur-sm"
+                className="p-8 rounded-3xl bg-chat-surface/50 border border-chat-border backdrop-blur-sm"
               >
                 <div className="flex justify-between items-start mb-4">
                   <div className={`p-3 rounded-2xl bg-${s.color}-500/10`}>
@@ -220,14 +242,14 @@ export default function AdminDashboard() {
                   </div>
                 </div>
                 <div className="text-4xl font-bold mb-1">{s.val}</div>
-                <div className="text-zinc-500 font-medium">{s.label}</div>
+                <div className="text-chat-muted font-medium">{s.label}</div>
               </motion.div>
             ))}
           </div>
 
           {/* List Section */}
-          <section className="bg-zinc-900/30 border border-zinc-800 rounded-[32px] overflow-hidden backdrop-blur-md">
-            <div className="p-8 border-b border-zinc-800 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <section className="bg-chat-surface/30 border border-chat-border rounded-[32px] overflow-hidden backdrop-blur-md">
+            <div className="p-8 border-b border-chat-border flex flex-col md:flex-row md:items-center justify-between gap-6">
               <h2 className="text-xl font-bold capitalize">{activeTab} Management</h2>
               <div className="relative w-full md:w-80">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600 w-4 h-4" />
@@ -236,14 +258,14 @@ export default function AdminDashboard() {
                   placeholder={`Search ${activeTab}...`}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl py-3 pl-12 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
+                  className="w-full bg-chat-bg border border-chat-border rounded-2xl py-3 pl-12 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
                 />
               </div>
             </div>
 
             <div className="overflow-x-auto">
               <table className="w-full text-left">
-                <thead className="bg-zinc-900/50 text-zinc-500 text-xs uppercase font-bold">
+                <thead className="bg-chat-surface/50 text-chat-muted text-xs uppercase font-bold">
                   {activeTab === "users" ? (
                     <tr>
                       <th className="px-8 py-4">User</th>
@@ -265,21 +287,21 @@ export default function AdminDashboard() {
                 <tbody className="divide-y divide-zinc-800/50">
                   {activeTab === "users" ? (
                     filteredUsers.map((u) => (
-                      <tr key={u._id} className="group hover:bg-zinc-800/30 transition-colors">
+                      <tr key={u._id} className="group hover:bg-chat-raised/30 transition-colors">
                         <td className="px-8 py-6">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center font-bold text-zinc-400">
+                            <div className="w-10 h-10 rounded-full bg-chat-raised border border-zinc-700 flex items-center justify-center font-bold text-zinc-400">
                               {u.name[0]}
                             </div>
                             <div>
-                              <div className="font-semibold text-white">{u.name}</div>
-                              <div className="text-xs text-zinc-500">{u.email}</div>
+                              <div className="font-semibold text-chat-text">{u.name}</div>
+                              <div className="text-xs text-chat-muted">{u.email}</div>
                             </div>
                           </div>
                         </td>
                         <td className="px-8 py-6">
                            <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                             u.status === 'online' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-zinc-800 text-zinc-500'
+                             u.status === 'online' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-chat-raised text-chat-muted'
                            }`}>
                              {u.status}
                            </span>
@@ -288,7 +310,7 @@ export default function AdminDashboard() {
                           <select 
                             value={u.role}
                             onChange={(e) => changeRole(u._id, e.target.value)}
-                            className="bg-zinc-950 border border-zinc-800 rounded-lg text-xs py-1 px-2 focus:outline-none"
+                            className="bg-chat-bg border border-chat-border rounded-lg text-xs py-1 px-2 focus:outline-none"
                           >
                             <option value="user">User</option>
                             <option value="admin">Admin</option>
@@ -329,17 +351,17 @@ export default function AdminDashboard() {
                     ))
                   ) : (
                     filteredRooms.map((r) => (
-                      <tr key={r._id} className="group hover:bg-zinc-800/30 transition-colors">
+                      <tr key={r._id} className="group hover:bg-chat-raised/30 transition-colors">
                         <td className="px-8 py-6">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center font-bold text-blue-400">
-                              {r.isGroup ? r.groupName?.[0] : (r.participants[0]?.name?.[0] || "?")}
+                              {r.isGroup ? r.name?.[0] : (r.participants[0]?.name?.[0] || "?")}
                             </div>
                             <div>
-                               <div className="font-semibold text-white">
-                                 {r.isGroup ? r.groupName : `${r.participants[0]?.name} & ${r.participants[1]?.name || '...'}`}
+                               <div className="font-semibold text-chat-text">
+                                 {r.isGroup ? r.name : `${r.participants[0]?.name} & ${r.participants[1]?.name || '...'}`}
                                </div>
-                               <div className="text-xs text-zinc-500">{r.participants.length} members</div>
+                               <div className="text-xs text-chat-muted">{r.participants.length} members</div>
                             </div>
                           </div>
                         </td>
@@ -354,7 +376,7 @@ export default function AdminDashboard() {
                         <td className="px-8 py-6 text-sm text-zinc-400">
                            {r.admin?.name || "System"}
                         </td>
-                        <td className="px-8 py-6 text-xs text-zinc-500">
+                        <td className="px-8 py-6 text-xs text-chat-muted">
                            {new Date(r.createdAt).toLocaleDateString()}
                         </td>
                         <td className="px-8 py-6 text-right">

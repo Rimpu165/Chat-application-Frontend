@@ -4,6 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { SocketProvider } from "@/context/SocketContext";
 import { Toaster } from "react-hot-toast";
+import Navbar from "@/components/Navbar";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -16,8 +17,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Aura Chat - Premium Experience",
-  description: "Connect with style and speed",
+  title: "Nexora Chat - Real-Time Social Messaging",
+  description: "Instagram-style social chat with calls, groups, and live messaging",
 };
 
 export default function RootLayout({
@@ -26,14 +27,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-zinc-950 text-zinc-50`}
+        className={`${geistSans.variable} ${geistMono.variable} min-h-screen antialiased bg-chat-bg text-chat-text`}
       >
         <AuthProvider>
           <SocketProvider>
+            <Navbar />
             {children}
-            <Toaster position="bottom-right" />
+            <Toaster
+              position="bottom-right"
+              toastOptions={{
+                className: "toast-nexora",
+                duration: 3200,
+              }}
+            />
           </SocketProvider>
         </AuthProvider>
       </body>

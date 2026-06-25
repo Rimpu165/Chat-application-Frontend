@@ -1,42 +1,133 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Nexora — midnight dark theme (indigo depth + violet accent) */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --chat-bg: #090b14;
+  --chat-surface: #111525;
+  --chat-raised: #191f34;
+  --chat-border: #2a3250;
+  --chat-accent: #8b5cf6;
+  --chat-accent-dim: rgba(139, 92, 246, 0.16);
+  --chat-bubble-out: #7c3aed;
+  --chat-bubble-in: #1a2038;
+  --chat-text: #f5f7ff;
+  --chat-muted: #9aa3bd;
+  --chat-success: #22c55e;
+}
+
+.light {
+  --chat-bg: #f8fafc;
+  --chat-surface: #ffffff;
+  --chat-raised: #f1f5f9;
+  --chat-border: #e2e8f0;
+  --chat-accent: #4f46e5;
+  --chat-accent-dim: rgba(79, 70, 229, 0.08);
+  --chat-bubble-out: #4f46e5;
+  --chat-bubble-in: #f1f5f9;
+  --chat-text: #020617;
+  --chat-muted: #475569;
+  --chat-success: #059669;
+}
+
+.dark {
+  --chat-bg: #090b14;
+  --chat-surface: #111525;
+  --chat-raised: #191f34;
+  --chat-border: #2a3250;
+  --chat-accent: #8b5cf6;
+}
+
+:root {
+  --background: var(--chat-bg);
+  --foreground: var(--chat-text);
+}
+
+body {
+  background-color: var(--chat-bg);
+  color: var(--chat-text);
 }
 
 @theme {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-chat-bg: var(--chat-bg);
+  --color-chat-surface: var(--chat-surface);
+  --color-chat-raised: var(--chat-raised);
+  --color-chat-border: var(--chat-border);
+  --color-chat-accent: var(--chat-accent);
+  --color-chat-accent-dim: var(--chat-accent-dim);
+  --color-chat-bubble-out: var(--chat-bubble-out);
+  --color-chat-bubble-in: var(--chat-bubble-in);
+  --color-chat-text: var(--chat-text);
+  --color-chat-muted: var(--chat-muted);
+  --color-chat-success: var(--chat-success);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
-  user-select: none;
+  background-color: var(--chat-bg);
+  color: var(--chat-text);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Custom Scrollbar */
+/* Allow selecting text in inputs and message content */
+input,
+textarea,
+[contenteditable="true"] {
+  user-select: text;
+}
+
 @layer base {
   .custom-scrollbar::-webkit-scrollbar {
-    width: 6px;
+    width: 8px;
+    height: 8px;
   }
   .custom-scrollbar::-webkit-scrollbar-track {
     background: transparent;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: #27272a;
-    border-radius: 10px;
+    background: color-mix(in oklab, var(--chat-accent) 35%, var(--chat-border));
+    border-radius: 999px;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: #3f3f46;
+    background: color-mix(in oklab, var(--chat-accent) 55%, var(--chat-border));
   }
+}
+
+/* Toast matches theme (react-hot-toast reads these via className on Toaster) */
+.toast-nexora {
+  background: var(--chat-raised) !important;
+  color: var(--chat-text) !important;
+  border: 1px solid var(--chat-border) !important;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45) !important;
+}
+
+.animate-aura {
+  background: radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.1) 0%, transparent 50%),
+              radial-gradient(circle at 80% 20%, rgba(20, 184, 166, 0.08) 0%, transparent 40%);
+  animation: aura 20s ease-in-out infinite alternate;
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.03) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite linear;
+}
+
+@keyframes aura {
+  0% { transform: scale(1) translate(0, 0); }
+  50% { transform: scale(1.05) translate(1%, 1%); }
+  100% { transform: scale(1) translate(-0.5%, 0.5%); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
