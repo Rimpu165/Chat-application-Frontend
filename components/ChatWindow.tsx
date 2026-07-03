@@ -19,7 +19,8 @@ import {
   Trash2,
   X,
   UserX,
-  PhoneCall
+  PhoneCall,
+  Globe
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -82,6 +83,7 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
   const otherAvatarUrl = room.isGroup
     ? undefined
     : resolveMediaUrl(otherParticipant?.profilePhoto);
+  const isGlobalChat = room.isGroup && room.name === "Global Chat";
 
   const senderIdOf = (msg: { sender: { _id?: string } | string }) =>
     typeof msg.sender === "object" && msg.sender ? msg.sender._id : (msg.sender as string);
@@ -416,6 +418,13 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
       ? resolveMediaUrl(msg.sender.profilePhoto)
       : undefined;
 
+  const getSenderName = (msg: any) => {
+    if (typeof msg.sender === "object" && msg.sender) {
+      return msg.sender.name || "Someone";
+    }
+    return "Someone";
+  };
+
   useEffect(() => {
     const onDocClick = (ev: MouseEvent) => {
       if (!menuRef.current) return;
@@ -535,6 +544,10 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
                 alt=""
                 className="h-11 w-11 rounded-2xl border border-chat-border object-cover shadow-inner"
               />
+            ) : isGlobalChat ? (
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-chat-border bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-inner">
+                 <Globe className="w-5 h-5" />
+              </div>
             ) : (
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-chat-border bg-chat-raised text-lg font-bold text-chat-muted shadow-inner">
                 {roomName[0]}
@@ -582,12 +595,16 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
         </div>
 
         <div className="flex shrink-0 items-center gap-1 sm:gap-2">
-           <button title="Voice call" type="button" onClick={() => startCall(false)} disabled={isBlockedChat} className="rounded-xl bg-chat-raised/80 p-2.5 text-chat-muted transition-all hover:bg-chat-border/80 hover:text-chat-text disabled:cursor-not-allowed disabled:opacity-40">
-              <Phone className="h-4 w-4" />
-           </button>
-           <button title="Video call" type="button" onClick={() => startCall(true)} disabled={isBlockedChat} className="rounded-xl bg-chat-raised/80 p-2.5 text-chat-muted transition-all hover:bg-chat-border/80 hover:text-chat-text disabled:cursor-not-allowed disabled:opacity-40">
-              <Video className="h-4 w-4" />
-           </button>
+          {!room.isGroup && (
+            <>
+               <button title="Voice call" type="button" onClick={() => startCall(false)} disabled={isBlockedChat} className="rounded-xl bg-chat-raised/80 p-2.5 text-chat-muted transition-all hover:bg-chat-border/80 hover:text-chat-text disabled:cursor-not-allowed disabled:opacity-40">
+                  <Phone className="h-4 w-4" />
+               </button>
+               <button title="Video call" type="button" onClick={() => startCall(true)} disabled={isBlockedChat} className="rounded-xl bg-chat-raised/80 p-2.5 text-chat-muted transition-all hover:bg-chat-border/80 hover:text-chat-text disabled:cursor-not-allowed disabled:opacity-40">
+                  <Video className="h-4 w-4" />
+               </button>
+            </>
+          )}
           <button
             title="More"
             type="button"
@@ -718,7 +735,7 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
               "flex items-end gap-3 max-w-[85%] sm:max-w-[70%]",
               isMe ? "ml-auto flex-row-reverse" : "mr-auto"
             )}>
-              {!isMe && (
+              {!isMe && !isGlobalChat && (
                 <div
                   className={cn(
                     "mb-0.5 h-8 w-8 shrink-0 overflow-hidden rounded-xl shadow-sm",
@@ -736,6 +753,11 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
               )}
               
               <div className="flex flex-col group">
+                {room.isGroup && !isMe && showAvatar && (
+                  <span className="text-[10px] font-bold text-chat-muted mb-1 pl-2">
+                    {getSenderName(msg)}
+                  </span>
+                )}
                 <div className={cn(
                   "relative rounded-[22px] px-4 py-2.5 text-sm shadow-sm",
                   isMe 

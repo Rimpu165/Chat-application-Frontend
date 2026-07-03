@@ -211,7 +211,7 @@ export default function UsersPage() {
 
       {/* Main Content */}
       <main className="flex-1 p-6 md:p-10 relative z-10">
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-screen-2xl mx-auto">
           <header className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-12">
              <div className="space-y-1">
                 <h1 className="text-4xl md:text-5xl font-bold tracking-tighter">Directory</h1>
