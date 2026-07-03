@@ -46,6 +46,8 @@ export default function Home() {
   // MOCK INTERACTIVE LANDING PAGE STATES
   const [mockTab, setMockTab] = useState<"chats" | "friends">("chats");
   const [friendsList, setFriendsList] = useState<any[]>([]);
+  const [roomsList, setRoomsList] = useState<any[]>([]);
+  const [pendingRequests, setPendingRequests] = useState<any[]>([]);
   const [activeChatId, setActiveChatId] = useState<string>("alice");
   const [mockInput, setMockInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -126,11 +128,16 @@ export default function Home() {
     if (user?._id) {
       const fetchDashboardData = async () => {
         try {
-          const res = await API.get("/auth/profile");
-          updateUser(res.data);
-
-          const friendsRes = await API.get("/friends/list");
+          const [profileRes, friendsRes, roomsRes, pendingRes] = await Promise.all([
+            API.get("/auth/profile"),
+            API.get("/friends/list"),
+            API.get("/rooms"),
+            API.get("/friends/pending")
+          ]);
+          updateUser(profileRes.data);
           setFriendsList(friendsRes.data);
+          setRoomsList(roomsRes.data.filter((r: any) => r.isGroup));
+          setPendingRequests(pendingRes.data);
         } catch (err) {
           console.error("Failed to fetch fresh profile and friends data:", err);
         }
@@ -232,8 +239,26 @@ export default function Home() {
               </div>
            </header>
 
-           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {/* Quick Links */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+               {/* Pending Invitations Alert */}
+               {pendingRequests.length > 0 && (
+                 <div className="lg:col-span-4 p-6 rounded-[32px] bg-amber-500/5 dark:bg-amber-500/10 border border-amber-500/20 flex flex-col md:flex-row items-center justify-between gap-4">
+                   <div className="flex items-center gap-3">
+                     <div className="p-2.5 rounded-2xl bg-amber-500/10 text-amber-500">
+                       <UserPlus className="h-6 w-6" />
+                     </div>
+                     <div>
+                       <h4 className="text-sm font-bold text-chat-text">Pending Network Invites</h4>
+                       <p className="text-xs text-chat-muted mt-0.5">You have {pendingRequests.length} connection requests waiting for approval.</p>
+                     </div>
+                   </div>
+                   <Link href="/requests" className="px-6 py-2.5 rounded-2xl bg-amber-500 text-white font-black text-xs hover:bg-amber-600 transition-all shadow-md shadow-amber-500/20 active:scale-95">
+                     View Invitations
+                   </Link>
+                 </div>
+               )}
+
+               {/* Quick Links */}
               <Link href="/requests" className="lg:col-span-2 p-8 rounded-[40px] bg-white/60 dark:bg-chat-surface/40 border border-black/10 dark:border-chat-border flex flex-col justify-between hover:border-black/20 dark:hover:border-chat-muted transition-all group overflow-hidden relative">
                  <div className="absolute top-0 right-0 p-8 text-chat-border group-hover:text-blue-500/20 transition-colors">
                     <UserPlus className="h-24 w-24" />
@@ -380,6 +405,70 @@ export default function Home() {
                           </div>
                        ))
                     )}
+                 </div>
+              </div>
+
+              {/* My Communities List Widget */}
+              {roomsList.length > 0 && (
+                <div className="lg:col-span-4 p-8 rounded-[40px] bg-white/60 dark:bg-chat-surface/40 border border-black/10 dark:border-chat-border space-y-6 shadow-[0_8px_30px_rgba(0,0,0,0.02)] animate-fadeIn">
+                   <div className="flex items-center justify-between">
+                      <h3 className="text-xl font-bold">My Communities</h3>
+                      <Link href="/groups" className="text-chat-accent text-xs font-black hover:underline flex items-center gap-1.5 group">
+                         Manage Groups <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
+                      </Link>
+                   </div>
+                   
+                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                      {roomsList.slice(0, 4).map((room) => (
+                         <div 
+                            key={room._id} 
+                            onClick={() => router.push(`/chat?room=${room._id}`)}
+                            className="p-5 rounded-3xl border border-black/5 dark:border-white/5 bg-white dark:bg-black/20 hover:border-chat-accent/40 hover:shadow-xl cursor-pointer transition-all group flex flex-col justify-between"
+                         >
+                            <div className="flex items-start justify-between">
+                               <div className="relative">
+                                  <div className="h-12 w-12 rounded-2xl overflow-hidden bg-chat-raised shadow-inner">
+                                     {room.image ? (
+                                       <img src={resolveMediaUrl(room.image)} className="h-full w-full object-cover" alt="" />
+                                     ) : (
+                                       <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-purple-500 to-indigo-600 text-white font-black text-sm uppercase">
+                                          {room.name[0]}
+                                       </div>
+                                     )}
+                                  </div>
+                               </div>
+                            </div>
+                            <div className="mt-4">
+                               <span className="block font-bold text-sm text-chat-text group-hover:text-chat-accent transition-colors truncate">{room.name}</span>
+                               <span className="block text-[9px] text-chat-muted font-bold uppercase tracking-wider mt-1">{room.participants?.length || 0} Members</span>
+                            </div>
+                         </div>
+                      ))}
+                   </div>
+                </div>
+              )}
+
+              {/* Global Activity Hub */}
+              <div className="lg:col-span-4 p-8 rounded-[40px] bg-white/60 dark:bg-chat-surface/40 border border-black/10 dark:border-chat-border grid grid-cols-1 md:grid-cols-2 gap-8 items-center shadow-[0_8px_30px_rgba(0,0,0,0.02)] animate-fadeIn">
+                 <div className="space-y-3">
+                    <span className="inline-block px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider text-teal-400 bg-teal-500/10 border border-teal-500/20">
+                       Real-time Pulse
+                    </span>
+                    <h3 className="text-2xl font-bold">Nexora Network Activity</h3>
+                    <p className="text-chat-muted text-xs leading-relaxed font-medium">
+                       There are currently <span className="text-chat-text font-black">{onlineUsers.length}</span> active connections on the server nodes.
+                    </p>
+                 </div>
+                 
+                 <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 rounded-3xl bg-chat-bg border border-chat-border text-center">
+                       <span className="block text-2xl font-black text-chat-accent">{friendsList.length}</span>
+                       <span className="block text-[10px] text-chat-muted font-bold uppercase tracking-wider mt-1">My Connections</span>
+                    </div>
+                    <div className="p-4 rounded-3xl bg-chat-bg border border-chat-border text-center">
+                       <span className="block text-2xl font-black text-teal-400">{roomsList.length}</span>
+                       <span className="block text-[10px] text-chat-muted font-bold uppercase tracking-wider mt-1">My Communities</span>
+                    </div>
                  </div>
               </div>
            </div>

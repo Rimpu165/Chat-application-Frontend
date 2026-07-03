@@ -7,7 +7,7 @@ import API from "@/lib/api";
 import { formatChatTime, formatLastSeen, previewFromLatestMessage } from "@/lib/format";
 import { cn, resolveMediaUrl } from "@/lib/utils";
 import Logo from "@/components/Logo";
-import { Search, MessageSquare, Settings, Users } from "lucide-react";
+import { Search, MessageSquare, Settings, Users, Globe } from "lucide-react";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
@@ -290,6 +290,10 @@ export default function ChatSidebar({ onSelectRoom, selectedRoomId }: ChatSideba
                   <div className="h-14 w-14 rounded-2xl overflow-hidden ring-2 ring-chat-border group-hover:ring-chat-accent/30 transition-all shadow-md">
                     {photoUrl && !room.isBlocked ? (
                       <img src={photoUrl} alt="" className="h-full w-full object-cover" />
+                    ) : room.isGroup && room.name === "Global Chat" ? (
+                      <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-inner">
+                         <Globe className="w-6 h-6" />
+                      </div>
                     ) : (
                       <div className="flex h-full w-full items-center justify-center bg-chat-raised text-xl font-black text-chat-muted">
                         {name[0]}
