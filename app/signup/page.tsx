@@ -2,16 +2,24 @@
  
 import { useAuth } from "@/context/AuthContext";
 import { motion } from "framer-motion";
-import { MessageSquare, Lock, Mail, User, ArrowRight, Loader2, ImagePlus, Plus, Camera } from "lucide-react";
+import { MessageSquare, Lock, Mail, User, ArrowRight, Loader2, ImagePlus, Plus, Camera, ArrowLeft } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
  
 export default function Signup() {
-  const { signup } = useAuth();
+  const { user, signup } = useAuth();
+  const router = useRouter();
   const [formData, setFormData] = useState({ name: "", email: "", password: "" });
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+ 
+  useEffect(() => {
+    if (user) {
+      router.push("/");
+    }
+  }, [user, router]);
  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,6 +35,13 @@ export default function Signup() {
  
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-chat-bg p-6 lg:p-12 selection:bg-chat-accent/35">
+      {/* Floating Back to Home Button */}
+      <Link 
+        href="/" 
+        className="absolute left-6 top-6 z-20 flex items-center gap-2 rounded-xl bg-white/80 dark:bg-black/25 border border-black/10 dark:border-white/10 px-4 py-2 text-xs font-bold text-chat-muted hover:text-chat-text hover:scale-[1.03] active:scale-[0.97] transition-all shadow-sm backdrop-blur-md"
+      >
+        <ArrowLeft className="h-4 w-4" /> Back to Home
+      </Link>
       {/* Radiant Moving Aura Blobs */}
       <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
         <div className="absolute -left-[10%] top-[10%] h-[40vh] w-[40vh] rounded-full bg-chat-accent/10 dark:bg-chat-accent/5 blur-[100px] animate-pulse" />
@@ -43,7 +58,7 @@ export default function Signup() {
           <div className="mb-5 rounded-2xl bg-gradient-to-tr from-chat-accent via-indigo-500 to-purple-600 p-3.5 text-white shadow-lg shadow-chat-accent/25 hover:scale-105 transition-transform duration-300">
             <MessageSquare className="h-7 w-7" />
           </div>
-          <h1 className="mb-1 text-3xl font-black tracking-tight text-chat-text bg-gradient-to-r from-chat-text via-chat-text to-chat-accent bg-clip-text">Create account</h1>
+          <h1 className="mb-1 text-3xl font-black tracking-tight text-transparent bg-gradient-to-r from-chat-text via-chat-text to-chat-accent bg-clip-text">Create account</h1>
           <p className="text-xs font-semibold text-chat-muted tracking-tight">Upload photo and fill details below</p>
         </div>
  

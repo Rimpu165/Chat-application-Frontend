@@ -184,7 +184,7 @@ export default function ProfilePage() {
         </button>
       </div>
 
-      <div className="mx-auto -mt-20 max-w-5xl px-6 pb-20 relative z-10">
+      <div className="mx-auto -mt-20 max-w-7xl px-6 pb-20 relative z-10">
         <div className="flex flex-col items-start gap-6 md:flex-row md:items-end">
           <div className="relative group/avatar">
             <div className="h-40 w-40 overflow-hidden rounded-[40px] border-[6px] border-chat-bg bg-chat-surface shadow-2xl">

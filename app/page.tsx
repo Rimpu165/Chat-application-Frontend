@@ -16,6 +16,8 @@ import { resolveMediaUrl } from "@/lib/utils";
 import Logo from "@/components/Logo";
 import { useAuth } from "@/context/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
+import { useSocket } from "@/context/SocketContext";
+import API from "@/lib/api";
 
 interface MockMessage {
   id: number;
@@ -36,12 +38,14 @@ interface MockChat {
 }
 
 export default function Home() {
-  const { user, loading, logout } = useAuth();
+  const { user, loading, logout, updateUser } = useAuth();
+  const { socket, onlineUsers } = useSocket();
   const router = useRouter();
   const [scrolled, setScrolled] = useState(false);
 
   // MOCK INTERACTIVE LANDING PAGE STATES
   const [mockTab, setMockTab] = useState<"chats" | "friends">("chats");
+  const [friendsList, setFriendsList] = useState<any[]>([]);
   const [activeChatId, setActiveChatId] = useState<string>("alice");
   const [mockInput, setMockInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -118,6 +122,23 @@ export default function Home() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  useEffect(() => {
+    if (user?._id) {
+      const fetchDashboardData = async () => {
+        try {
+          const res = await API.get("/auth/profile");
+          updateUser(res.data);
+
+          const friendsRes = await API.get("/friends/list");
+          setFriendsList(friendsRes.data);
+        } catch (err) {
+          console.error("Failed to fetch fresh profile and friends data:", err);
+        }
+      };
+      fetchDashboardData();
+    }
+  }, [user?._id]);
+
   // Handle Mock Send Message
   const handleSendMockMessage = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -184,12 +205,13 @@ export default function Home() {
 
   // LOGGED IN DASHBOARD VIEW (PRESERVED)
   if (user) {
+    const isLive = onlineUsers.includes(user._id);
     return (
       <div className="min-h-screen bg-chat-bg text-chat-text overflow-x-hidden relative">
         <div className="absolute top-0 right-0 w-[50%] h-[40%] bg-blue-600/5 blur-[120px] rounded-full pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-[30%] h-[40%] bg-purple-600/5 blur-[120px] rounded-full pointer-events-none" />
 
-        <main className="max-w-7xl mx-auto px-6 pt-32 pb-20">
+        <main className="max-w-screen-2xl mx-auto px-6 pt-32 pb-20">
            
            <header className="mb-12">
               <motion.h1 
@@ -249,7 +271,12 @@ export default function Home() {
               <div className="lg:col-span-3 p-8 rounded-[40px] bg-blue-600/5 border border-blue-500/20 grid grid-cols-1 md:grid-cols-3 gap-8">
                 <div className="space-y-1">
                    <p className="text-xs font-black uppercase text-blue-400 tracking-widest">Network Status</p>
-                   <p className="text-2xl font-bold leading-tight">Your Nexora presence is currently <span className="text-blue-300">Live</span></p>
+                   <p className="text-2xl font-bold leading-tight">
+                     Your Nexora presence is currently{" "}
+                     <span className={isLive ? "text-blue-400 dark:text-blue-300 font-bold" : "text-chat-muted font-bold"}>
+                       {isLive ? "Live" : "Offline"}
+                     </span>
+                   </p>
                 </div>
                 <div className="flex flex-col justify-center">
                    <p className="text-chat-muted text-xs font-bold uppercase mb-1">Total Connections</p>
@@ -267,6 +294,93 @@ export default function Home() {
                  </div>
                  <h3 className="text-xl font-black mb-1">Chat Home</h3>
                  <p className="text-white/70 text-xs">Jump back into your messages.</p>
+              </div>
+
+              {/* Online Friends Widget */}
+              <div className="lg:col-span-2 p-8 rounded-[40px] bg-white/60 dark:bg-chat-surface/40 border border-black/10 dark:border-chat-border flex flex-col justify-between shadow-[0_8px_30px_rgba(0,0,0,0.02)]">
+                 <div>
+                    <div className="flex items-center justify-between mb-4">
+                       <h3 className="text-xl font-bold">Active Connections</h3>
+                       <span className="text-[10px] font-bold text-chat-success bg-chat-success/10 px-2.5 py-1 rounded-full uppercase tracking-wider">
+                         {friendsList.filter(f => onlineUsers.includes(f._id)).length} Online
+                       </span>
+                    </div>
+                    <p className="text-chat-muted text-xs font-medium mb-6">See who is currently active and start direct relays.</p>
+                 </div>
+                 
+                 <div className="flex gap-4 overflow-x-auto pb-2 custom-scrollbar">
+                    {friendsList.length === 0 ? (
+                       <div className="w-full text-center py-6">
+                          <p className="text-chat-muted text-xs font-semibold">No connections added yet.</p>
+                          <Link href="/users" className="text-chat-accent text-xs font-black hover:underline mt-2 inline-block">
+                             Find Friends
+                          </Link>
+                       </div>
+                    ) : friendsList.filter(f => onlineUsers.includes(f._id)).length === 0 ? (
+                       <div className="w-full text-center py-6">
+                          <p className="text-chat-muted text-xs font-semibold">None of your friends are currently active.</p>
+                       </div>
+                    ) : (
+                       friendsList.filter(f => onlineUsers.includes(f._id)).map((friend) => (
+                          <div 
+                             key={friend._id} 
+                             onClick={() => router.push("/chat")}
+                             className="flex flex-col items-center gap-2 cursor-pointer group shrink-0"
+                          >
+                             <div className="relative">
+                                <div className="h-14 w-14 rounded-2xl overflow-hidden bg-chat-raised ring-2 ring-transparent group-hover:ring-chat-accent/40 transition-all shadow-md">
+                                   {friend.profilePhoto ? (
+                                     <img src={resolveMediaUrl(friend.profilePhoto)} className="h-full w-full object-cover" alt="" />
+                                   ) : (
+                                     <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-chat-accent to-blue-600 text-white font-black text-sm uppercase">
+                                        {friend.name[0]}
+                                     </div>
+                                   )}
+                                </div>
+                                <span className="absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full bg-chat-success border-2 border-chat-bg shadow-sm" />
+                             </div>
+                             <span className="text-[10px] font-bold text-chat-text truncate w-16 text-center group-hover:text-chat-accent transition-colors">
+                                {friend.name.split(" ")[0]}
+                             </span>
+                          </div>
+                       ))
+                    )}
+                 </div>
+              </div>
+
+              {/* Galleria Showcase Preview */}
+              <div className="lg:col-span-2 p-8 rounded-[40px] bg-white/60 dark:bg-chat-surface/40 border border-black/10 dark:border-chat-border flex flex-col justify-between shadow-[0_8px_30px_rgba(0,0,0,0.02)]">
+                 <div>
+                    <div className="flex items-center justify-between mb-4">
+                       <h3 className="text-xl font-bold">Your Galleria Showcase</h3>
+                       <span className="text-[10px] font-bold text-chat-muted border border-chat-border px-2.5 py-1 rounded-full uppercase tracking-wider">
+                         {user.gallery?.length || 0} Items
+                       </span>
+                    </div>
+                    <p className="text-chat-muted text-xs font-medium mb-6">A snippet of your public showcase portfolio.</p>
+                 </div>
+                 
+                 <div className="flex gap-4 overflow-x-auto pb-2 custom-scrollbar">
+                    {!user.gallery || user.gallery.length === 0 ? (
+                       <div className="w-full text-center py-6">
+                          <p className="text-chat-muted text-xs font-semibold">Your showcase gallery is empty.</p>
+                          <Link href="/profile" className="text-chat-accent text-xs font-black hover:underline mt-2 inline-block">
+                             Upload Photos
+                          </Link>
+                       </div>
+                    ) : (
+                       user.gallery.map((imgUrl, idx) => (
+                          <div 
+                             key={idx} 
+                             className="h-16 w-16 rounded-2xl overflow-hidden shrink-0 border border-black/5 dark:border-white/5 relative group cursor-pointer"
+                             onClick={() => router.push("/profile")}
+                          >
+                             <img src={resolveMediaUrl(imgUrl)} className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-300" alt="" />
+                             <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
+                       ))
+                    )}
+                 </div>
               </div>
            </div>
         </main>
@@ -350,7 +464,7 @@ export default function Home() {
 
       {/* Floating Apple-Style Glass Navbar */}
       <nav className={`fixed inset-x-0 top-0 z-50 transition-all duration-500 px-4 md:px-8 py-6 ${scrolled ? 'pt-4' : 'pt-6'}`}>
-        <div className={`mx-auto max-w-6xl rounded-3xl border border-black/10 dark:border-white/5 bg-white/95 dark:bg-black/25 backdrop-blur-2xl px-6 py-3.5 flex items-center justify-between transition-all duration-300 shadow-[0_8px_32px_rgba(0,0,0,0.04)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.12)] ${scrolled ? 'shadow-[0_12px_40px_rgba(0,0,0,0.08)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.3)] bg-white dark:bg-black/40 border-black/15 dark:border-white/10' : ''}`}>
+        <div className={`mx-auto max-w-7xl rounded-3xl border border-black/10 dark:border-white/5 bg-white/95 dark:bg-black/25 backdrop-blur-2xl px-6 py-3.5 flex items-center justify-between transition-all duration-300 shadow-[0_8px_32px_rgba(0,0,0,0.04)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.12)] ${scrolled ? 'shadow-[0_12px_40px_rgba(0,0,0,0.08)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.3)] bg-white dark:bg-black/40 border-black/15 dark:border-white/10' : ''}`}>
           <div className="flex items-center gap-2.5">
             <div className="p-2 bg-chat-accent rounded-xl shadow-lg shadow-chat-accent/25">
               <Logo size="sm" />
@@ -358,16 +472,16 @@ export default function Home() {
             <span className="text-lg font-black tracking-tight uppercase text-chat-text">Nexora</span>
           </div>
           
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
             <Link
               href="/login"
-              className="rounded-full px-5 py-2 text-sm font-bold text-chat-muted hover:text-chat-text transition-colors"
+              className="rounded-full px-3 py-1.5 sm:px-5 sm:py-2 text-xs sm:text-sm font-bold text-chat-muted hover:text-chat-text transition-colors"
             >
               Log in
             </Link>
             <Link
               href="/signup"
-              className="rounded-full bg-chat-text text-chat-bg px-6 py-2.5 text-sm font-black tracking-tight shadow-lg shadow-chat-text/10 transition-all hover:scale-[1.03] active:scale-[0.97]"
+              className="rounded-full bg-chat-text text-chat-bg px-4 py-2 sm:px-6 sm:py-2.5 text-xs sm:text-sm font-black tracking-tight shadow-lg shadow-chat-text/10 transition-all hover:scale-[1.03] active:scale-[0.97]"
             >
               Create Account
             </Link>
@@ -378,7 +492,7 @@ export default function Home() {
       </nav>
 
       {/* Hero Section */}
-      <main className="relative z-10 mx-auto flex max-w-6xl flex-col items-center px-4 pt-32 pb-24 md:pt-40 lg:pb-32 flex-1 w-full">
+      <main className="relative z-10 mx-auto flex max-w-7xl flex-col items-center px-4 pt-32 pb-24 md:pt-40 lg:pb-32 flex-1 w-full">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -448,15 +562,15 @@ export default function Home() {
             <div className="flex flex-1 min-h-0 relative">
               
               {/* Mock Sidebar */}
-              <div className="w-64 border-r border-black/10 dark:border-white/5 flex flex-col min-h-0 bg-slate-50/80 dark:bg-black/10 shrink-0">
-                <div className="p-4 space-y-4 shrink-0">
+              <div className="w-16 md:w-64 border-r border-black/10 dark:border-white/5 flex flex-col min-h-0 bg-slate-50/80 dark:bg-black/10 shrink-0">
+                <div className="p-2 md:p-4 space-y-4 shrink-0">
                   <div className="flex items-center justify-between">
-                    <span className="text-[12px] font-black uppercase tracking-widest text-chat-text">Nexora Conversations</span>
-                    <span className="w-2.5 h-2.5 rounded-full bg-chat-success shadow-[0_0_8px_currentColor]" />
+                    <span className="text-[12px] font-black uppercase tracking-widest text-chat-text hidden md:block">Nexora Conversations</span>
+                    <span className="w-2.5 h-2.5 rounded-full bg-chat-success shadow-[0_0_8px_currentColor] hidden md:block" />
                   </div>
                   
                   {/* Search bar mockup */}
-                  <div className="relative">
+                  <div className="relative hidden md:block">
                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-chat-muted" />
                     <input 
                       type="text" 
@@ -468,7 +582,7 @@ export default function Home() {
                   </div>
 
                   {/* Sidebar Tabs */}
-                  <div className="flex p-0.5 bg-slate-100 dark:bg-white/5 rounded-xl border border-black/10 dark:border-white/10 text-[10px] font-bold">
+                  <div className="flex p-0.5 bg-slate-100 dark:bg-white/5 rounded-xl border border-black/10 dark:border-white/10 text-[10px] font-bold hidden md:flex">
                     <button 
                       onClick={() => setMockTab("chats")}
                       className={`flex-1 py-1.5 rounded-lg transition-all ${mockTab === "chats" ? "bg-white dark:bg-white/10 text-chat-text shadow-sm" : "text-chat-muted hover:text-chat-text"}`}
@@ -485,13 +599,13 @@ export default function Home() {
                 </div>
 
                 {/* Sidebar Scrollable Items */}
-                <div className="flex-1 overflow-y-auto px-2 pb-4 space-y-1.5 custom-scrollbar">
+                <div className="flex-1 overflow-y-auto px-1 md:px-2 pb-4 space-y-1.5 custom-scrollbar flex flex-col items-center md:items-stretch">
                   {mockTab === "chats" ? (
                     filteredMockChats.map((chat) => (
                       <button
                         key={chat.id}
                         onClick={() => setActiveChatId(chat.id)}
-                        className={`w-full text-left p-3 rounded-2xl flex items-center gap-3 transition-all border ${activeChatId === chat.id ? 'bg-chat-accent/10 border-chat-accent/20 shadow-md' : 'border-transparent hover:bg-white/80 dark:hover:bg-white/5'}`}
+                        className={`w-full text-left p-2 md:p-3 rounded-2xl flex items-center justify-center md:justify-start gap-3 transition-all border ${activeChatId === chat.id ? 'bg-chat-accent/10 border-chat-accent/20 shadow-md' : 'border-transparent hover:bg-white/80 dark:hover:bg-white/5'}`}
                       >
                         <div className="relative shrink-0">
                           <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${chat.avatarColor} text-white flex items-center justify-center font-bold text-sm shadow-md`}>
@@ -504,7 +618,7 @@ export default function Home() {
                             <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-amber-400 border-2 border-chat-bg" />
                           )}
                         </div>
-                        <div className="min-w-0 flex-1">
+                        <div className="min-w-0 flex-1 hidden md:block">
                           <div className="flex justify-between items-center mb-0.5">
                             <span className="font-bold text-xs truncate text-chat-text">{chat.name}</span>
                             <span className="text-[9px] text-chat-muted tabular-nums">10:15 AM</span>
@@ -519,18 +633,19 @@ export default function Home() {
                     mockFriendsList.map((friend, idx) => (
                       <div
                         key={idx}
-                        className="p-3 rounded-2xl flex items-center justify-between bg-white dark:bg-white/5 border border-black/5 dark:border-white/5"
+                        className="w-full p-2 md:p-3 rounded-2xl flex items-center justify-between bg-white dark:bg-white/5 border border-black/5 dark:border-white/5"
+                        title={`${friend.name} - ${friend.role}`}
                       >
-                        <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="flex items-center justify-center md:justify-start gap-2.5 min-w-0 w-full">
                           <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${friend.color} text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-inner`}>
                             {friend.name.split(" ").map(n => n[0]).join("")}
                           </div>
-                          <div className="min-w-0">
+                          <div className="min-w-0 hidden md:block">
                             <span className="block font-bold text-xs text-chat-text truncate leading-none mb-1">{friend.name}</span>
                             <span className="block text-[9px] text-chat-muted truncate leading-none">{friend.role}</span>
                           </div>
                         </div>
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 hidden md:flex">
                           {friend.status === "online" && <span className="w-2 h-2 rounded-full bg-chat-success" />}
                           {friend.status === "away" && <span className="w-2 h-2 rounded-full bg-amber-400" />}
                           {friend.status === "offline" && <span className="text-[8px] text-chat-muted font-bold">{friend.lastSeen}</span>}
@@ -541,18 +656,18 @@ export default function Home() {
                 </div>
 
                 {/* Sidebar Bottom Profile Widget */}
-                <div className="p-3 border-t border-black/10 dark:border-white/5 bg-slate-50/90 dark:bg-black/10 shrink-0">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center font-black text-xs shadow-md">
+                <div className="p-2 md:p-3 border-t border-black/10 dark:border-white/5 bg-slate-50/90 dark:bg-black/10 shrink-0">
+                  <div className="flex items-center justify-center md:justify-start gap-2.5">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center font-black text-xs shadow-md shrink-0">
                       TE
                     </div>
-                    <div className="min-w-0 flex-1">
+                    <div className="min-w-0 flex-1 hidden md:block">
                       <p className="text-xs font-bold text-chat-text truncate">Test Visitor</p>
                       <p className="text-[9px] text-chat-muted flex items-center gap-1">
                         <span className="h-1.5 w-1.5 rounded-full bg-chat-success animate-pulse" /> Active Demo
                       </p>
                     </div>
-                    <button className="p-1.5 rounded-lg bg-white dark:bg-white/5 text-chat-muted hover:text-chat-text transition-colors">
+                    <button className="p-1.5 rounded-lg bg-white dark:bg-white/5 text-chat-muted hover:text-chat-text transition-colors hidden md:block">
                       <Settings className="w-3.5 h-3.5" />
                     </button>
                   </div>
@@ -842,6 +957,59 @@ export default function Home() {
           </div>
         </section>
 
+        {/* SECTION: PREMIUM CAPABILITIES */}
+        <section className="w-full my-24 space-y-16">
+          <div className="text-center space-y-3">
+             <h2 className="text-xs font-black uppercase tracking-[0.2em] text-chat-accent">Core Engine</h2>
+             <h3 className="text-3xl md:text-5xl font-black tracking-tighter">Engineered for the Modern Web</h3>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {[
+              {
+                title: "WebRTC Voice & Video",
+                description: "Experience peer-to-peer crystal clear calls. Features echo cancellation, automatic noise suppression, and camera aspect auto-adaptation.",
+                badge: "HD Streaming",
+                color: "border-blue-500/20 text-blue-400 bg-blue-500/5",
+              },
+              {
+                title: "Custom Socket Channels",
+                description: "Stateful events propagate in milliseconds. Typing indicators, read receipts, and user presence reflect instantly across all clients.",
+                badge: "WebSocket V2",
+                color: "border-purple-500/20 text-purple-400 bg-purple-500/5",
+              },
+              {
+                title: "JWT Authentication",
+                description: "Industry-standard cryptographic signatures secure every request. Auto-expiring tokens protect against session hijacking and replay attacks.",
+                badge: "SHA-256 Secure",
+                color: "border-teal-500/20 text-teal-400 bg-teal-500/5",
+              },
+              {
+                title: "Adaptive Blurs & Blends",
+                description: "Fully customized CSS backdrop-filters and gradients adjust dynamically based on system themes and scroll depth offsets.",
+                badge: "OKLCH Tailored",
+                color: "border-pink-500/20 text-pink-400 bg-pink-500/5",
+              }
+            ].map((cap, idx) => (
+              <div 
+                key={idx} 
+                className="rounded-[2.5rem] border border-black/10 dark:border-white/5 bg-white dark:bg-black/20 p-8 flex flex-col justify-between hover:border-black/20 dark:hover:border-white/10 transition-all hover:-translate-y-1.5 duration-300 shadow-[0_8px_30px_rgba(0,0,0,0.02)]"
+              >
+                <div className="space-y-4">
+                  <span className={`inline-block px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${cap.color}`}>
+                    {cap.badge}
+                  </span>
+                  <h4 className="text-lg font-black text-chat-text">{cap.title}</h4>
+                  <p className="text-xs text-chat-muted leading-relaxed font-medium">{cap.description}</p>
+                </div>
+                <div className="mt-8 flex items-center gap-1.5 text-xs font-bold text-chat-accent cursor-pointer group/link">
+                  Learn more <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover/link:translate-x-1" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
         {/* SECTION: STATS / METRICS */}
         <section className="w-full my-24">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
@@ -914,81 +1082,6 @@ export default function Home() {
           </div>
         </section>
 
-        {/* SECTION: PRICING PLANS */}
-        <section className="w-full my-24 space-y-12">
-          <div className="text-center space-y-3">
-             <h2 className="text-xs font-black uppercase tracking-[0.2em] text-chat-accent">Simple Tiers</h2>
-             <h3 className="text-3xl md:text-5xl font-black tracking-tighter">Choose your experience.</h3>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              {
-                name: "Basic",
-                price: "$0",
-                period: "forever",
-                desc: "Essential chat features for casual users.",
-                features: ["Real-time Text Sync", "1-on-1 Direct Messaging", "Standard Profile Customization", "Limit of 5 Active Friends"],
-                cta: "Start Free",
-                popular: false,
-                color: "border-black/10 dark:border-white/5"
-              },
-              {
-                name: "Pro Showcase",
-                price: "$9",
-                period: "per month",
-                desc: "Advanced social tools for active creators.",
-                features: ["All Basic features", "Unlimited Friend Relays", "Full Media Galleria uploads", "Stateful Audio/Video calls", "Custom room categories"],
-                cta: "Upgrade to Pro",
-                popular: true,
-                color: "border-chat-accent/40 bg-gradient-to-b from-chat-accent/5 to-transparent"
-              },
-              {
-                name: "Developer Core",
-                price: "$29",
-                period: "per month",
-                desc: "Unrestricted API integration and WebRTC keys.",
-                features: ["All Pro features", "Custom Socket.io event endpoints", "Dedicated ICE/TURN servers", "Raw JWT authentication exports", "Priority support"],
-                cta: "Join Developer Portal",
-                popular: false,
-                color: "border-black/10 dark:border-white/5"
-              }
-            ].map((plan, idx) => (
-              <div 
-                key={idx} 
-                className={`relative rounded-[2.5rem] border ${plan.color} bg-white dark:bg-black/20 p-8 flex flex-col justify-between backdrop-blur-xl hover:shadow-2xl hover:border-black/25 dark:hover:border-white/10 transition-all group shadow-[0_8px_30px_rgba(0,0,0,0.02)] ${plan.popular ? 'scale-105 border-chat-accent' : ''}`}
-              >
-                {plan.popular && (
-                  <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-chat-accent text-white px-4 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-md">
-                    Most Popular
-                  </span>
-                )}
-                <div>
-                  <h4 className="text-lg font-black text-chat-text">{plan.name}</h4>
-                  <p className="text-xs text-chat-muted font-medium mt-1">{plan.desc}</p>
-                  <div className="my-6 flex items-baseline gap-1">
-                    <span className="text-4xl font-black text-chat-text">{plan.price}</span>
-                    <span className="text-xs text-chat-muted">/{plan.period}</span>
-                  </div>
-                  <ul className="space-y-3.5 border-t border-black/5 dark:border-white/5 pt-6 text-xs text-chat-text/90 font-medium">
-                    {plan.features.map((feat, fidx) => (
-                      <li key={fidx} className="flex items-center gap-2.5">
-                        <Check className="h-4 w-4 text-chat-accent shrink-0" />
-                        <span>{feat}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <button 
-                  type="button" 
-                  className={`w-full h-12 rounded-2xl font-black text-xs uppercase tracking-wider mt-8 transition-all active:scale-[0.98] ${plan.popular ? 'bg-chat-accent text-white shadow-lg shadow-chat-accent/20' : 'bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/5 text-chat-text hover:bg-black/10 hover:border-black/20'}`}
-                >
-                  {plan.cta}
-                </button>
-              </div>
-            ))}
-          </div>
-        </section>
 
         {/* SECTION: FAQ ACCORDION */}
         <section className="w-full my-24 space-y-12 max-w-4xl mx-auto">
@@ -1053,7 +1146,7 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="relative z-10 border-t border-black/10 bg-white/40 dark:bg-black/25 dark:border-white/5 py-12 px-6 backdrop-blur-md">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 text-sm text-chat-muted md:flex-row">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-6 text-sm text-chat-muted md:flex-row">
           <div className="flex items-center gap-2">
             <Logo size="sm" showText />
             <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-chat-muted border-l border-white/20 pl-3">v2.0 Premium</span>

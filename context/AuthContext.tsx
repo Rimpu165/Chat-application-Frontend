@@ -55,6 +55,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setToken(storedToken);
       setUser(JSON.parse(storedUser));
     }
+
+    // Apply stored or default theme on mount
+    const savedTheme = localStorage.getItem("theme") as "dark" | "light" | null;
+    const initialTheme = savedTheme || "dark";
+    const root = document.documentElement;
+    root.classList.remove("light", "dark");
+    root.classList.add(initialTheme);
+    root.style.colorScheme = initialTheme;
+
     setLoading(false);
   }, []);
 

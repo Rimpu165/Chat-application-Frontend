@@ -244,7 +244,7 @@ export default function GroupsPage() {
       {/* Animated Aura Background */}
       <div className="absolute inset-0 animate-aura pointer-events-none z-0" />
       
-      <div className="relative z-10 mx-auto max-w-5xl space-y-8 p-4 md:p-8">
+      <div className="relative z-10 mx-auto max-w-7xl space-y-8 p-4 md:p-8">
         
         {/* Header */}
         <div className="flex items-center justify-between">

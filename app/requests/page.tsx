@@ -148,7 +148,7 @@ export default function RequestsPage() {
 
 
       <main className="flex-1 p-6 md:p-10 relative z-10">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-5xl mx-auto">
           <header className="mb-12">
              <button onClick={() => router.back()} className="flex items-center gap-2 text-chat-muted hover:text-chat-text transition-colors mb-6 group">
                <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" /> Back
