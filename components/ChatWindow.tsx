@@ -846,7 +846,7 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
       </div>
 
       {/* Input area */}
-      <footer className="relative z-10 shrink-0 border-t border-chat-border/60 bg-linear-to-t from-chat-bg via-chat-bg to-transparent p-4 sm:p-6">
+      <footer className="relative z-10 shrink-0 border-t border-chat-border/60 bg-linear-to-t from-chat-bg via-chat-bg to-transparent p-4 pb-16 sm:p-6 md:pb-6">
         {!sendStatus.canSend ? (
           <div className="mx-auto max-w-4xl rounded-2xl border border-chat-border bg-chat-surface/90 p-4 text-center backdrop-blur-md">
             <p className="mb-3 text-sm font-medium text-chat-muted">

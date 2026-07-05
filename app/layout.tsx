@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Nexora Chat - Real-Time Social Messaging",
+  title: "Chatiq - Real-Time Social Messaging",
   description: "Instagram-style social chat with calls, groups, and live messaging",
 };
 
@@ -38,7 +38,7 @@ export default function RootLayout({
             <Toaster
               position="bottom-right"
               toastOptions={{
-                className: "toast-nexora",
+                className: "toast-chatiq",
                 duration: 3200,
               }}
             />

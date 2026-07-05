@@ -222,7 +222,10 @@ export default function ChatSidebar({ onSelectRoom, selectedRoomId }: ChatSideba
   const userPhoto = resolveMediaUrl(user?.profilePhoto);
 
   return (
-    <aside className="flex h-full min-h-0 w-80 shrink-0 flex-col border-r border-chat-border bg-chat-surface/90 backdrop-blur-md">
+    <aside className={cn(
+      "h-full min-h-0 w-full md:w-80 shrink-0 flex-col border-r border-chat-border bg-chat-surface/90 backdrop-blur-md pb-16 md:pb-0",
+      selectedRoomId ? "hidden md:flex" : "flex"
+    )}>
       <div className="p-5">
         <div className="mb-7 flex items-center justify-between">
            <Logo size="sm" showText />
@@ -310,7 +313,7 @@ export default function ChatSidebar({ onSelectRoom, selectedRoomId }: ChatSideba
                     </div>
                   </div>
                   <p className="text-xs text-chat-muted font-medium mb-3 leading-relaxed">
-                    {globalChatRoom.description || "Welcome to the global public room. Connect and chat with all Nexora users in real-time."}
+                    {globalChatRoom.description || "Welcome to the global public room. Connect and chat with all Chatiq users in real-time."}
                   </p>
                   <div className="flex items-center gap-4 text-[10px] font-bold text-chat-muted">
                     <span>{globalChatRoom.participants?.length || 0} Total Members</span>

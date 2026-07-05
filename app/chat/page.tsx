@@ -51,7 +51,10 @@ function ChatPageInner() {
       <div className="relative z-10 flex flex-1 min-h-0 w-full transition-all duration-500">
         <ChatSidebar onSelectRoom={setSelectedRoom} selectedRoomId={selectedRoom?._id as string | undefined} />
 
-        <div className="relative flex h-full min-h-0 flex-1 flex-col bg-chat-bg">
+        <div className={cn(
+          "relative h-full min-h-0 flex-col bg-chat-bg",
+          selectedRoom ? "flex w-full md:flex-1" : "hidden md:flex md:flex-1"
+        )}>
           <AnimatePresence mode="wait">
             {selectedRoom ? (
               <motion.div

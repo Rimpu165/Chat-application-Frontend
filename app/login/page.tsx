@@ -30,7 +30,30 @@ export default function Login() {
       setIsLoading(false);
     }
   };
- 
+
+  if (user) {
+    return (
+      <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-chat-bg p-6 lg:p-12">
+        <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+          <div className="absolute -left-[10%] top-[10%] h-[40vh] w-[40vh] rounded-full bg-chat-accent/10 dark:bg-chat-accent/5 blur-[100px] animate-pulse" />
+          <div className="absolute -right-[10%] bottom-[10%] h-[40vh] w-[40vh] rounded-full bg-teal-500/8 dark:bg-teal-500/4 blur-[100px] animate-pulse delay-1000" />
+        </div>
+        <div className="relative z-10 flex flex-col items-center text-center space-y-4">
+          <div className="animate-bounce rounded-2xl bg-gradient-to-tr from-chat-accent via-indigo-500 to-purple-600 p-4 text-white shadow-lg shadow-chat-accent/25">
+            <MessageSquare className="h-8 w-8" />
+          </div>
+          <h2 className="text-2xl font-black tracking-tight text-transparent bg-gradient-to-r from-chat-text via-chat-text to-chat-accent bg-clip-text">
+            Entering Chatiq...
+          </h2>
+          <div className="flex items-center gap-2 text-xs font-bold text-chat-muted">
+            <Loader2 className="h-4 w-4 animate-spin text-chat-accent" />
+            <span>Loading dashboard</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-chat-bg p-6 lg:p-12 selection:bg-chat-accent/35">
       {/* Floating Back to Home Button */}
@@ -79,7 +102,7 @@ export default function Login() {
           <div className="space-y-2">
             <div className="flex items-center justify-between pl-2">
               <label className="text-[11px] font-black uppercase tracking-wider text-chat-muted">Password</label>
-              <span className="text-[10px] font-bold text-chat-muted hover:text-chat-accent cursor-pointer transition-colors">Forgot?</span>
+              <Link href="/forgot-password" className="text-[10px] font-bold text-chat-muted hover:text-chat-accent cursor-pointer transition-colors">Forgot?</Link>
             </div>
             <div className="group relative">
               <Lock className="absolute left-4.5 top-1/2 h-4 w-4 -translate-y-1/2 text-chat-muted transition-colors group-focus-within:text-chat-accent" />
@@ -113,7 +136,7 @@ export default function Login() {
           <p className="text-xs text-chat-muted font-medium">
             Need an account?{" "}
             <Link href="/signup" className="font-bold text-chat-accent hover:underline transition-all">
-              Join Nexora
+              Join Chatiq
             </Link>
           </p>
         </div>

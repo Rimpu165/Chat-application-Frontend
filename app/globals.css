@@ -2,7 +2,7 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Nexora — midnight dark theme (indigo depth + violet accent) */
+/* Chatiq — midnight dark theme (indigo depth + violet accent) */
 :root {
   --chat-bg: #090b14;
   --chat-surface: #111525;
@@ -97,7 +97,7 @@ textarea,
 }
 
 /* Toast matches theme (react-hot-toast reads these via className on Toaster) */
-.toast-nexora {
+.toast-chatiq {
   background: var(--chat-raised) !important;
   color: var(--chat-text) !important;
   border: 1px solid var(--chat-border) !important;

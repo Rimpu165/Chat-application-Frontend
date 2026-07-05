@@ -137,7 +137,7 @@ export default function ProfilePage() {
   };
 
   const onDeleteAccount = async () => {
-    if (!window.confirm("Permanently erase your Nexora account? This cannot be undone.")) return;
+    if (!window.confirm("Permanently erase your Chatiq account? This cannot be undone.")) return;
     try {
       await API.delete("/users");
       logout();
@@ -162,13 +162,13 @@ export default function ProfilePage() {
         
         <div className="absolute inset-x-0 bottom-0 h-24 bg-linear-to-t from-chat-bg to-transparent" />
         
-        <div className="absolute right-6 bottom-6 flex items-center gap-3">
-           <ThemeToggle />
+        <div className="absolute right-4 bottom-4 md:right-6 md:bottom-6 flex items-center gap-3">
+           <ThemeToggle className="hidden sm:flex h-10 w-10 items-center justify-center rounded-xl bg-chat-surface border border-chat-border text-chat-muted hover:text-chat-text transition-all hover:scale-105 active:scale-95" />
            <button 
              onClick={() => coverInputRef.current?.click()}
-             className="flex items-center gap-2 rounded-2xl bg-white/10 px-4 py-2 text-xs font-bold backdrop-blur-md transition-all hover:bg-white/20"
+             className="flex items-center gap-1.5 md:gap-2 rounded-xl md:rounded-2xl bg-white/10 px-3 md:px-4 py-1.5 md:py-2 text-xs font-bold backdrop-blur-md transition-all hover:bg-white/20"
            >
-             <Camera className="h-4 w-4" /> Change Cover
+             <Camera className="h-3.5 w-3.5 md:h-4 md:w-4" /> Change Cover
            </button>
         </div>
         <input ref={coverInputRef} type="file" className="hidden" accept="image/*" onChange={(e) => {
@@ -178,29 +178,29 @@ export default function ProfilePage() {
 
         <button
           onClick={() => router.push("/")}
-          className="absolute left-6 top-6 flex items-center gap-2 rounded-xl bg-black/20 p-3 text-xs font-bold backdrop-blur-md transition-all hover:bg-black/40"
+          className="absolute left-4 top-24 md:top-6 flex items-center gap-1.5 md:gap-2 rounded-xl bg-black/20 p-2 md:p-3 text-xs font-bold backdrop-blur-md transition-all hover:bg-black/40"
         >
-          <ArrowLeft className="h-4 w-4" /> Exit Edit
+          <ArrowLeft className="h-3.5 w-3.5 md:h-4 md:w-4" /> Exit Edit
         </button>
       </div>
 
-      <div className="mx-auto -mt-20 max-w-7xl px-6 pb-20 relative z-10">
-        <div className="flex flex-col items-start gap-6 md:flex-row md:items-end">
+      <div className="mx-auto -mt-14 md:-mt-20 max-w-7xl px-4 md:px-6 pb-24 md:pb-20 relative z-10">
+        <div className="flex flex-col items-start gap-4 md:gap-6 md:flex-row md:items-end">
           <div className="relative group/avatar">
-            <div className="h-40 w-40 overflow-hidden rounded-[40px] border-[6px] border-chat-bg bg-chat-surface shadow-2xl">
+            <div className="h-28 w-28 md:h-40 md:w-40 overflow-hidden rounded-[28px] md:rounded-[40px] border-4 md:border-[6px] border-chat-bg bg-chat-surface shadow-2xl">
               {profileUrl ? (
                 <img src={profileUrl} alt={user.name} className="h-full w-full object-cover" />
               ) : (
-                <div className="flex h-full w-full items-center justify-center text-5xl font-black text-chat-muted/40">
+                <div className="flex h-full w-full items-center justify-center text-4xl md:text-5xl font-black text-chat-muted/40">
                   {user.name[0]}
                 </div>
               )}
             </div>
             <button 
               onClick={() => profileInputRef.current?.click()}
-              className="absolute -bottom-2 -right-2 flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-600/30 transition-transform hover:scale-110 active:scale-95"
+              className="absolute -bottom-1 -right-1 flex h-8 w-8 md:h-10 md:w-10 items-center justify-center rounded-xl md:rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-600/30 transition-transform hover:scale-110 active:scale-95"
             >
-              <Camera className="h-5 w-5" />
+              <Camera className="h-4 w-4 md:h-5 md:w-5" />
             </button>
             <input ref={profileInputRef} type="file" className="hidden" accept="image/*" onChange={(e) => {
               const file = e.target.files?.[0];
@@ -209,22 +209,22 @@ export default function ProfilePage() {
           </div>
 
           <div className="flex-1 space-y-1">
-            <h1 className="text-4xl font-black tracking-tighter uppercase">{user.name}</h1>
-            <p className="font-medium text-chat-muted uppercase tracking-widest text-xs">Community Member Since {new Date(user.createdAt).getFullYear()}</p>
+            <h1 className="text-2xl md:text-4xl font-black tracking-tighter uppercase">{user.name}</h1>
+            <p className="font-medium text-chat-muted uppercase tracking-widest text-[9px] md:text-xs">Community Member Since {new Date(user.createdAt).getFullYear()}</p>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-1.5 md:gap-2">
             <button
                onClick={() => setActiveTab("about")}
-               className={`flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-bold transition-all ${activeTab === 'about' ? 'bg-chat-raised text-chat-text shadow-lg' : 'text-chat-muted hover:text-chat-text'}`}
+               className={`flex items-center gap-1.5 md:gap-2 rounded-xl md:rounded-2xl px-4 md:px-5 py-2 md:py-3 text-xs md:text-sm font-bold transition-all ${activeTab === 'about' ? 'bg-chat-raised text-chat-text shadow-lg' : 'text-chat-muted hover:text-chat-text'}`}
             >
-              <UserIcon className="h-4 w-4" /> About
+              <UserIcon className="h-3.5 w-3.5 md:h-4 md:w-4" /> About
             </button>
             <button
                onClick={() => setActiveTab("gallery")}
-               className={`flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-bold transition-all ${activeTab === 'gallery' ? 'bg-chat-raised text-chat-text shadow-lg' : 'text-chat-muted hover:text-chat-text'}`}
+               className={`flex items-center gap-1.5 md:gap-2 rounded-xl md:rounded-2xl px-4 md:px-5 py-2 md:py-3 text-xs md:text-sm font-bold transition-all ${activeTab === 'gallery' ? 'bg-chat-raised text-chat-text shadow-lg' : 'text-chat-muted hover:text-chat-text'}`}
             >
-              <ImageIcon className="h-4 w-4" /> Gallery
+              <ImageIcon className="h-3.5 w-3.5 md:h-4 md:w-4" /> Gallery
             </button>
           </div>
         </div>
@@ -240,27 +240,27 @@ export default function ProfilePage() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95 }}
-                  className="space-y-8 rounded-[40px] border border-chat-border bg-chat-surface/40 p-10 backdrop-blur-xl"
+                  className="space-y-6 md:space-y-8 rounded-[24px] md:rounded-[40px] border border-chat-border bg-chat-surface/40 p-4 md:p-10 backdrop-blur-xl"
                 >
-                  <div className="grid gap-8 md:grid-cols-2">
-                    <div className="space-y-4">
+                  <div className="grid gap-4 md:gap-8 md:grid-cols-2">
+                    <div className="space-y-2 md:space-y-4">
                       <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-chat-muted">
                         <Info className="h-3 w-3" /> Full Name
                       </label>
                       <input
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        className="w-full rounded-2xl border border-chat-border bg-chat-bg h-14 px-6 text-sm font-bold focus:border-chat-accent/50 focus:outline-none transition-all"
+                        className="w-full rounded-xl md:rounded-2xl border border-chat-border bg-chat-bg h-11 md:h-14 px-4 md:px-6 text-sm font-bold focus:border-chat-accent/50 focus:outline-none transition-all"
                       />
                     </div>
-                    <div className="space-y-4">
+                    <div className="space-y-2 md:space-y-4">
                       <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-chat-muted">
                         <Save className="h-3 w-3" /> Status
                       </label>
                       <select
                         value={status}
                         onChange={(e) => setStatus(e.target.value as any)}
-                        className="w-full rounded-2xl border border-chat-border bg-chat-bg h-14 px-6 text-sm font-bold focus:border-chat-accent/50 focus:outline-none transition-all appearance-none"
+                        className="w-full rounded-xl md:rounded-2xl border border-chat-border bg-chat-bg h-11 md:h-14 px-4 md:px-6 text-sm font-bold focus:border-chat-accent/50 focus:outline-none transition-all appearance-none"
                       >
                         <option value="online">Available</option>
                         <option value="offline">Invisible</option>
@@ -268,8 +268,8 @@ export default function ProfilePage() {
                     </div>
                   </div>
 
-                  <div className="grid gap-8 md:grid-cols-3">
-                    <div className="space-y-4">
+                  <div className="grid gap-4 md:gap-8 md:grid-cols-3">
+                    <div className="space-y-2 md:space-y-4">
                       <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-chat-muted">
                         Age
                       </label>
@@ -277,17 +277,17 @@ export default function ProfilePage() {
                         type="number"
                         value={age}
                         onChange={(e) => setAge(e.target.value)}
-                        className="w-full rounded-2xl border border-chat-border bg-chat-bg h-14 px-6 text-sm font-bold focus:border-chat-accent/50 focus:outline-none transition-all"
+                        className="w-full rounded-xl md:rounded-2xl border border-chat-border bg-chat-bg h-11 md:h-14 px-4 md:px-6 text-sm font-bold focus:border-chat-accent/50 focus:outline-none transition-all"
                       />
                     </div>
-                    <div className="space-y-4">
+                    <div className="space-y-2 md:space-y-4">
                       <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-chat-muted">
                         Gender
                       </label>
                       <select
                         value={gender}
                         onChange={(e) => setGender(e.target.value as any)}
-                        className="w-full rounded-2xl border border-chat-border bg-chat-bg h-14 px-6 text-sm font-bold focus:border-chat-accent/50 focus:outline-none transition-all appearance-none"
+                        className="w-full rounded-xl md:rounded-2xl border border-chat-border bg-chat-bg h-11 md:h-14 px-4 md:px-6 text-sm font-bold focus:border-chat-accent/50 focus:outline-none transition-all appearance-none"
                       >
                         <option value="Secret">Secret</option>
                         <option value="Male">Male</option>
@@ -295,14 +295,14 @@ export default function ProfilePage() {
                         <option value="Other">Other</option>
                       </select>
                     </div>
-                    <div className="space-y-4">
+                    <div className="space-y-2 md:space-y-4">
                       <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-chat-muted">
                         Location
                       </label>
                       <input
                         value={location}
                         onChange={(e) => setLocation(e.target.value)}
-                        className="w-full rounded-2xl border border-chat-border bg-chat-bg h-14 px-6 text-sm font-bold focus:border-chat-accent/50 focus:outline-none transition-all"
+                        className="w-full rounded-xl md:rounded-2xl border border-chat-border bg-chat-bg h-11 md:h-14 px-4 md:px-6 text-sm font-bold focus:border-chat-accent/50 focus:outline-none transition-all"
                       />
                     </div>
                   </div>
@@ -351,16 +351,16 @@ export default function ProfilePage() {
                     </div>
                   </div>
 
-                  <div className="space-y-4">
+                  <div className="space-y-2 md:space-y-4">
                     <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-chat-muted">
                     <LayoutDashboard className="h-3 w-3" /> Biography
                     </label>
                     <textarea
                       value={bio}
                       onChange={(e) => setBio(e.target.value)}
-                      placeholder="Tell the Nexora world about yourself..."
+                      placeholder="Tell the Chatiq world about yourself..."
                       rows={4}
-                      className="w-full rounded-3xl border border-chat-border bg-chat-bg p-6 text-sm font-medium focus:border-chat-accent/50 focus:outline-none transition-all resize-none text-chat-text"
+                      className="w-full rounded-2xl md:rounded-3xl border border-chat-border bg-chat-bg p-4 md:p-6 text-sm font-medium focus:border-chat-accent/50 focus:outline-none transition-all resize-none text-chat-text"
                     />
                     <div className="flex justify-end">
                       <span className="text-[10px] text-chat-muted bg-chat-raised px-2 py-1 rounded-full uppercase font-bold tracking-tighter">
@@ -369,37 +369,37 @@ export default function ProfilePage() {
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between border-t border-chat-border pt-8">
-                    <div className="flex items-center gap-3">
-                       <div className={`p-3 rounded-2xl transition-colors ${isPrivate ? 'bg-amber-500/10 text-amber-500' : 'bg-chat-accent/10 text-chat-accent'}`}>
-                          {isPrivate ? <ShieldOff className="h-5 w-5" /> : <ShieldCheck className="h-5 w-5" />}
+                  <div className="flex items-center justify-between border-t border-chat-border pt-6 md:pt-8">
+                    <div className="flex items-center gap-2 md:gap-3">
+                       <div className={`p-2.5 md:p-3 rounded-xl md:rounded-2xl transition-colors ${isPrivate ? 'bg-amber-500/10 text-amber-500' : 'bg-chat-accent/10 text-chat-accent'}`}>
+                          {isPrivate ? <ShieldOff className="h-4 w-4 md:h-5 md:w-5" /> : <ShieldCheck className="h-4 w-4 md:h-5 md:w-5" />}
                        </div>
                        <div>
-                          <p className="text-sm font-bold">{isPrivate ? 'Private Profile' : 'Public Profile'}</p>
-                          <p className="text-xs text-chat-muted">{isPrivate ? 'Only friends can see your details.' : 'Everyone on Nexora can see your profile.'}</p>
+                          <p className="text-xs md:text-sm font-bold">{isPrivate ? 'Private Profile' : 'Public Profile'}</p>
+                          <p className="text-[10px] md:text-xs text-chat-muted">{isPrivate ? 'Only friends can see details.' : 'Everyone on Chatiq can see profile.'}</p>
                        </div>
                     </div>
                     <button 
                       onClick={() => setIsPrivate(!isPrivate)}
-                      className={`h-8 w-14 rounded-full p-1 transition-all ${isPrivate ? 'bg-amber-500' : 'bg-chat-raised'}`}
+                      className={`h-7 w-12 rounded-full p-0.5 transition-all ${isPrivate ? 'bg-amber-500' : 'bg-chat-raised'}`}
                     >
-                      <div className={`h-6 w-6 rounded-full bg-white transition-transform ${isPrivate ? 'translate-x-6' : 'translate-x-0'}`} />
+                      <div className={`h-5 w-5 rounded-full bg-white transition-transform ${isPrivate ? 'translate-x-5' : 'translate-x-0'}`} />
                     </button>
                   </div>
 
-                  <div className="flex gap-4 pt-4">
+                  <div className="flex gap-3 md:gap-4 pt-2 md:pt-4">
                     <button
                       onClick={onUpdateProfile}
                       disabled={isSaving}
-                      className="flex-1 rounded-2xl bg-chat-text h-14 font-black text-chat-bg hover:opacity-90 transition-all active:scale-[0.98] shadow-2xl shadow-chat-text/5"
+                      className="flex-1 rounded-xl md:rounded-2xl bg-chat-text h-11 md:h-14 font-black text-chat-bg hover:opacity-90 transition-all active:scale-[0.98] shadow-2xl shadow-chat-text/5"
                     >
                       Save Portfolio
                     </button>
                     <button
                        onClick={onDeleteAccount}
-                       className="h-14 w-14 rounded-2xl bg-chat-bg border border-red-500/30 flex items-center justify-center text-red-500 hover:bg-red-500/10 transition-all"
+                       className="h-11 w-11 md:h-14 md:w-14 rounded-xl md:rounded-2xl bg-chat-bg border border-red-500/30 flex items-center justify-center text-red-500 hover:bg-red-500/10 transition-all"
                     >
-                       <Trash2 className="h-5 w-5" />
+                       <Trash2 className="h-4.5 w-4.5 md:h-5 md:w-5" />
                     </button>
                   </div>
                 </motion.div>
@@ -409,7 +409,7 @@ export default function ProfilePage() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95 }}
-                  className="space-y-8 rounded-[40px] border border-chat-border bg-chat-surface/40 p-10 backdrop-blur-xl"
+                  className="space-y-6 md:space-y-8 rounded-[24px] md:rounded-[40px] border border-chat-border bg-chat-surface/40 p-4 md:p-10 backdrop-blur-xl"
                 >
                   <div className="flex items-center justify-between">
                      <h2 className="text-2xl font-black uppercase tracking-tighter flex items-center gap-2">
@@ -461,7 +461,7 @@ export default function ProfilePage() {
 
           {/* Activity Column */}
           <div className="space-y-6">
-             <div className="rounded-[40px] border border-chat-border bg-chat-surface/60 p-8 space-y-6">
+             <div className="rounded-[24px] md:rounded-[40px] border border-chat-border bg-chat-surface/60 p-5 md:p-8 space-y-4 md:space-y-6">
                 <h3 className="text-xs font-black uppercase tracking-widest text-chat-muted">Quick Stats</h3>
                 <div className="grid grid-cols-2 gap-4">
                    <div className="bg-chat-bg p-4 rounded-3xl border border-chat-border">
@@ -475,8 +475,8 @@ export default function ProfilePage() {
                 </div>
              </div>
 
-             <div className="rounded-[40px] border border-chat-border bg-linear-to-br from-blue-600/10 to-purple-600/10 p-8">
-                <h3 className="text-sm font-bold mb-4">Nexora Passport</h3>
+             <div className="rounded-[24px] md:rounded-[40px] border border-chat-border bg-linear-to-br from-blue-600/10 to-purple-600/10 p-5 md:p-8">
+                <h3 className="text-sm font-bold mb-4">Chatiq Passport</h3>
                 <p className="text-xs text-chat-muted leading-relaxed mb-6">Your profile is your identity across the network. Keep it updated for better community discoverability.</p>
                 <div className="flex items-center gap-4 text-xs font-black uppercase">
                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-chat-accent/20 text-chat-accent">

@@ -138,7 +138,7 @@ export default function UserProfileModal({ userId, onClose, onActionSuccess, isO
                         {profile.isFriend && <ShieldCheck className="h-5 w-5 text-blue-500" />}
                       </div>
                       <p className="text-xs font-bold text-chat-muted uppercase tracking-widest">
-                        {profile.isPrivate ? 'Private Profile' : 'Nexora Citizen'}
+                        {profile.isPrivate ? 'Private Profile' : 'Chatiq Member'}
                       </p>
                     </div>
                  </div>
