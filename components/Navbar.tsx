@@ -8,17 +8,45 @@ import Logo from "./Logo";
 import ThemeToggle from "./ThemeToggle";
 import { 
   MessageSquare, Users, LayoutGrid, 
-  Bell, Home, User, LogOut, ShieldAlert 
+  Bell, Home, User, LogOut, ShieldAlert, Search
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
+import API from "@/lib/api";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
   const [scrolled, setScrolled] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    if (user) {
+      const fetchPendingCount = async () => {
+        try {
+          const res = await API.get("/friends/pending");
+          setPendingCount(res.data.length);
+        } catch (err) {
+          console.error("Failed to fetch pending count for navbar:", err);
+        }
+      };
+      fetchPendingCount();
+
+      const interval = setInterval(fetchPendingCount, 15000);
+      return () => clearInterval(interval);
+    }
+  }, [user]);
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/users?search=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchQuery("");
+    }
+  };
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 10);
@@ -65,8 +93,13 @@ export default function Navbar() {
                   isActive ? "text-chat-text bg-chat-raised shadow-md" : "text-chat-muted hover:text-chat-text hover:bg-chat-surface/40"
                 )}
               >
-                <span className={cn("transition-transform group-hover:scale-110", isActive && "text-chat-accent")}>
+                <span className={cn("relative transition-transform group-hover:scale-110 flex items-center", isActive && "text-chat-accent")}>
                   {link.icon}
+                  {link.name === "Requests" && pendingCount > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 h-3.5 w-3.5 flex items-center justify-center rounded-full bg-red-500 text-white text-[8px] font-black shadow-sm ring-1 ring-white/10">
+                      {pendingCount}
+                    </span>
+                  )}
                 </span>
                 <span>{link.name}</span>
                 {isActive && (
@@ -80,6 +113,18 @@ export default function Navbar() {
             );
           })}
         </div>
+
+        {/* Desktop Search Bar */}
+        <form onSubmit={handleSearchSubmit} className="hidden lg:flex items-center relative max-w-[200px] xl:max-w-[280px] w-full mx-4">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-chat-muted" />
+          <input
+            type="text"
+            placeholder="Search people..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-chat-surface/40 hover:bg-chat-surface/60 border border-chat-border/60 focus:border-chat-accent/60 rounded-xl py-2 pl-9 pr-4 text-xs text-chat-text focus:outline-none transition-all placeholder:text-chat-muted/80 font-semibold shadow-inner"
+          />
+        </form>
 
         {/* Mobile controls (sleek glass pill) */}
         <div className="flex md:hidden items-center gap-2.5 bg-chat-surface/60 border border-chat-border/60 p-1.5 rounded-full shadow-lg backdrop-blur-md">
@@ -158,8 +203,13 @@ export default function Navbar() {
               isActive ? "text-chat-accent" : "text-chat-muted hover:text-chat-text"
             )}
           >
-            <span className={cn("transition-transform", isActive ? "scale-110 text-chat-accent" : "scale-100")}>
+            <span className={cn("relative transition-transform", isActive ? "scale-110 text-chat-accent" : "scale-100")}>
               {link.icon}
+              {link.name === "Requests" && pendingCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 h-3.5 w-3.5 flex items-center justify-center rounded-full bg-red-500 text-white text-[8px] font-black shadow-sm ring-1 ring-white/10">
+                  {pendingCount}
+                </span>
+              )}
             </span>
             <span className="text-[9px] font-black tracking-tight">{link.name}</span>
             {isActive && (
