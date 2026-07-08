@@ -5,6 +5,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import { SocketProvider } from "@/context/SocketContext";
 import { Toaster } from "react-hot-toast";
 import Navbar from "@/components/Navbar";
+import NotificationBanner from "@/components/NotificationBanner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -34,6 +35,7 @@ export default function RootLayout({
         <AuthProvider>
           <SocketProvider>
             <Navbar />
+            <NotificationBanner />
             {children}
             <Toaster
               position="bottom-right"

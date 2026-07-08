@@ -123,7 +123,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      if (typeof window !== "undefined" && "serviceWorker" in navigator && "PushManager" in window) {
+        const registration = await navigator.serviceWorker.ready;
+        const subscription = await registration.pushManager.getSubscription();
+        if (subscription) {
+          const endpoint = subscription.endpoint;
+          // Delete subscription from backend
+          await API.delete("/users/push-unsubscribe", { data: { endpoint } });
+          // Unsubscribe locally
+          await subscription.unsubscribe();
+        }
+      }
+    } catch (err) {
+      console.error("Error during push unsubscribe on logout:", err);
+    }
+
     setToken(null);
     setUser(null);
     localStorage.removeItem("token");
