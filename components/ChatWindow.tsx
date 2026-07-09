@@ -1093,9 +1093,10 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
                     ))}
                    </div>
                    <div className={cn(
-                     "mt-1 flex items-center justify-end gap-1 text-[9px]",
+                     "mt-1 flex items-center justify-end gap-1.5 text-[9px]",
                      isMe ? "text-white/70" : "text-chat-muted"
                    )}>
+                     {msg.isPinned && <Pin className="h-2.5 w-2.5 rotate-45 text-chat-accent shrink-0" />}
                      {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                      {isMe &&
                        (msg.status === "seen" ? (
@@ -1110,6 +1111,29 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
                 <div className="mt-1 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                   <button title="Reply" type="button" onClick={() => setReplyTo(msg)} className="rounded p-1 hover:bg-chat-raised"><Reply className="h-3 w-3" /></button>
                   <button title="React" type="button" onClick={() => API.post(`/messages/${msg._id}/react`, { emoji: "❤️" })} className="rounded p-1 text-xs hover:bg-chat-raised">❤️</button>
+                  {!msg.isDeleted && (
+                    <>
+                      <button
+                        title={msg.isPinned ? "Unpin message" : "Pin message"}
+                        type="button"
+                        onClick={() => handleTogglePin(msg._id)}
+                        className={cn(
+                          "rounded p-1 transition-all",
+                          msg.isPinned ? "text-chat-accent hover:bg-chat-raised" : "hover:bg-chat-raised text-chat-text"
+                        )}
+                      >
+                        <Pin className="h-3 w-3 rotate-45" />
+                      </button>
+                      <button
+                        title="Forward message"
+                        type="button"
+                        onClick={() => handleForwardClick(msg)}
+                        className="rounded p-1 hover:bg-chat-raised text-chat-text"
+                      >
+                        <CornerUpRight className="h-3 w-3" />
+                      </button>
+                    </>
+                  )}
                   {!msg.isDeleted && msg.message && (
                     <div className="relative">
                       <button
