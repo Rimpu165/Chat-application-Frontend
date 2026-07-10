@@ -243,62 +243,61 @@ export default function Home() {
         <div className="absolute bottom-0 left-0 w-[30%] h-[40%] bg-purple-600/5 blur-[120px] rounded-full pointer-events-none" />
 
         <main className="max-w-screen-2xl mx-auto px-4 md:px-6 pt-24 md:pt-32 pb-24 md:pb-20">
-           
-           <header className="mb-8 md:mb-12">
+              <header className="mb-6 md:mb-8">
               <motion.h1 
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="text-2xl sm:text-5xl md:text-7xl font-black tracking-tighter mb-3 md:mb-4 text-chat-text"
+                className="text-xl sm:text-3xl md:text-5xl font-extrabold tracking-tight mb-2 md:mb-3 text-chat-text"
               >
                 Welcome back, <br/>
                 <span className="bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">{user.name}</span>
               </motion.h1>
-              <div className="flex flex-wrap gap-3 mt-6 md:mt-8">
-                 <Link href="/chat" className="flex items-center gap-2.5 px-6 md:px-8 h-11 md:h-14 rounded-2xl md:rounded-3xl bg-blue-600 text-white font-black text-sm md:text-lg hover:bg-blue-500 transition-all shadow-xl shadow-blue-600/20 active:scale-95 group">
-                    <MessageSquare className="h-4.5 w-4.5 md:h-5 md:w-5 group-hover:rotate-12 transition-transform" /> Chat Now
+              <div className="flex flex-wrap gap-2.5 mt-4 md:mt-6">
+                 <Link href="/chat" className="flex items-center gap-2 px-5 md:px-6 h-10 md:h-12 rounded-xl md:rounded-2xl bg-blue-600 text-white font-semibold text-xs md:text-sm hover:bg-blue-500 transition-all shadow-xl shadow-blue-600/20 active:scale-95 group">
+                    <MessageSquare className="h-4 w-4 md:h-4.5 md:w-4.5 group-hover:rotate-12 transition-transform" /> Chat Now
                  </Link>
-                 <Link href="/users" className="flex items-center gap-2.5 px-6 md:px-8 h-11 md:h-14 rounded-2xl md:rounded-3xl bg-chat-raised border border-chat-border text-chat-text font-black text-sm md:text-lg hover:bg-chat-surface transition-all active:scale-95 group">
-                    <Users className="h-4.5 w-4.5 md:h-5 md:w-5 group-hover:scale-110 transition-transform" /> Explore People
+                 <Link href="/users" className="flex items-center gap-2 px-5 md:px-6 h-10 md:h-12 rounded-xl md:rounded-2xl bg-chat-raised border border-chat-border text-chat-text font-semibold text-xs md:text-sm hover:bg-chat-surface transition-all active:scale-95 group">
+                    <Users className="h-4 w-4 md:h-4.5 md:w-4.5 group-hover:scale-110 transition-transform" /> Explore People
                  </Link>
               </div>
             </header>
 
             {/* Quick Stats Row */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8 md:mb-12">
-               <div className="p-5 rounded-2xl bg-white/60 dark:bg-chat-surface/40 border border-black/10 dark:border-chat-border hover:border-chat-accent/40 hover:-translate-y-1 hover:shadow-lg transition-all duration-300 flex items-center gap-4 group">
-                  <div className="bg-blue-500/10 p-3 rounded-xl text-blue-500 group-hover:scale-110 transition-transform">
-                     <MessageSquare className="h-5 w-5" />
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8 md:mb-10">
+               <div className="p-4.5 rounded-2xl bg-white/60 dark:bg-chat-surface/40 border border-black/10 dark:border-chat-border hover:border-chat-accent/40 hover:-translate-y-1 hover:shadow-lg transition-all duration-300 flex items-center gap-4 group">
+                  <div className="bg-blue-500/10 p-2.5 rounded-xl text-blue-500 group-hover:scale-110 transition-transform">
+                     <MessageSquare className="h-4.5 w-4.5" />
                   </div>
                   <div>
-                     <p className="text-[10px] text-chat-muted font-black uppercase tracking-wider">Messages Today</p>
-                     <p className="text-xl font-extrabold mt-0.5">28</p>
+                     <p className="text-[10px] text-chat-muted font-bold uppercase tracking-wider">Messages Today</p>
+                     <p className="text-lg font-bold mt-0.5">28</p>
                   </div>
                </div>
-               <div className="p-5 rounded-2xl bg-white/60 dark:bg-chat-surface/40 border border-black/10 dark:border-chat-border hover:border-chat-accent/40 hover:-translate-y-1 hover:shadow-lg transition-all duration-300 flex items-center gap-4 group">
-                  <div className="bg-amber-500/10 p-3 rounded-xl text-amber-500 group-hover:scale-110 transition-transform">
-                     <UserPlus className="h-5 w-5" />
+               <div className="p-4.5 rounded-2xl bg-white/60 dark:bg-chat-surface/40 border border-black/10 dark:border-chat-border hover:border-chat-accent/40 hover:-translate-y-1 hover:shadow-lg transition-all duration-300 flex items-center gap-4 group">
+                  <div className="bg-amber-500/10 p-2.5 rounded-xl text-amber-500 group-hover:scale-110 transition-transform">
+                     <UserPlus className="h-4.5 w-4.5" />
                   </div>
                   <div>
-                     <p className="text-[10px] text-chat-muted font-black uppercase tracking-wider">Pending Requests</p>
-                     <p className="text-xl font-extrabold mt-0.5">{pendingRequests.length}</p>
+                     <p className="text-[10px] text-chat-muted font-bold uppercase tracking-wider">Pending Requests</p>
+                     <p className="text-lg font-bold mt-0.5">{pendingRequests.length}</p>
                   </div>
                </div>
-               <div className="p-5 rounded-2xl bg-white/60 dark:bg-chat-surface/40 border border-black/10 dark:border-chat-border hover:border-chat-accent/40 hover:-translate-y-1 hover:shadow-lg transition-all duration-300 flex items-center gap-4 group">
-                  <div className="bg-teal-500/10 p-3 rounded-xl text-teal-400 group-hover:scale-110 transition-transform">
-                     <Zap className="h-5 w-5" />
+               <div className="p-4.5 rounded-2xl bg-white/60 dark:bg-chat-surface/40 border border-black/10 dark:border-chat-border hover:border-chat-accent/40 hover:-translate-y-1 hover:shadow-lg transition-all duration-300 flex items-center gap-4 group">
+                  <div className="bg-teal-500/10 p-2.5 rounded-xl text-teal-400 group-hover:scale-110 transition-transform">
+                     <Zap className="h-4.5 w-4.5" />
                   </div>
                   <div>
-                     <p className="text-[10px] text-chat-muted font-black uppercase tracking-wider">New Connections</p>
-                     <p className="text-xl font-extrabold mt-0.5">4</p>
+                     <p className="text-[10px] text-chat-muted font-bold uppercase tracking-wider">New Connections</p>
+                     <p className="text-lg font-bold mt-0.5">4</p>
                   </div>
                </div>
-               <div className="p-5 rounded-2xl bg-white/60 dark:bg-chat-surface/40 border border-black/10 dark:border-chat-border hover:border-chat-accent/40 hover:-translate-y-1 hover:shadow-lg transition-all duration-300 flex items-center gap-4 group">
-                  <div className="bg-purple-500/10 p-3 rounded-xl text-purple-400 group-hover:scale-110 transition-transform">
-                     <LayoutGrid className="h-5 w-5" />
+               <div className="p-4.5 rounded-2xl bg-white/60 dark:bg-chat-surface/40 border border-black/10 dark:border-chat-border hover:border-chat-accent/40 hover:-translate-y-1 hover:shadow-lg transition-all duration-300 flex items-center gap-4 group">
+                  <div className="bg-purple-500/10 p-2.5 rounded-xl text-purple-400 group-hover:scale-110 transition-transform">
+                     <LayoutGrid className="h-4.5 w-4.5" />
                   </div>
                   <div>
-                     <p className="text-[10px] text-chat-muted font-black uppercase tracking-wider">Communities Joined</p>
-                     <p className="text-xl font-extrabold mt-0.5">{roomsList.length}</p>
+                     <p className="text-[10px] text-chat-muted font-bold uppercase tracking-wider">Communities Joined</p>
+                     <p className="text-lg font-bold mt-0.5">{roomsList.length}</p>
                   </div>
                </div>
             </div>

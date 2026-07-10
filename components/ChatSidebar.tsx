@@ -367,7 +367,7 @@ export default function ChatSidebar({ onSelectRoom, selectedRoomId }: ChatSideba
                       {photoUrl && !room.isBlocked ? (
                         <img src={photoUrl} alt="" className="h-full w-full object-cover" />
                       ) : (
-                        <div className="flex h-full w-full items-center justify-center bg-chat-raised text-xl font-black text-chat-muted">
+                        <div className="flex h-full w-full items-center justify-center bg-chat-raised text-xl font-bold text-chat-muted">
                           {name[0]}
                         </div>
                       )}
@@ -380,7 +380,7 @@ export default function ChatSidebar({ onSelectRoom, selectedRoomId }: ChatSideba
                   <div className="flex-1 text-left overflow-hidden">
                     <div className="flex justify-between items-center mb-1">
                       <span className={cn(
-                        "truncate font-black text-sm tracking-tight",
+                        "truncate font-semibold text-sm tracking-tight",
                         selectedRoomId === room._id ? "text-chat-text" : "text-chat-text"
                       )}>
                         {name}
@@ -400,7 +400,7 @@ export default function ChatSidebar({ onSelectRoom, selectedRoomId }: ChatSideba
                         {room.isBlocked ? "Blocked chat" : lastMsg}
                       </p>
                       {Number(room.unreadCount || 0) > 0 && (
-                        <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-chat-accent px-1.5 text-[10px] font-black leading-none text-chat-bg shadow-lg shadow-chat-accent/20">
+                        <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-chat-accent px-1.5 text-[10px] font-bold leading-none text-chat-bg shadow-lg shadow-chat-accent/20">
                           {Number(room.unreadCount) > 99 ? "99+" : Number(room.unreadCount)}
                         </span>
                       )}

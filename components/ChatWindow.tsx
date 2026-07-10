@@ -1351,7 +1351,7 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
                       <button
                         type="button"
                         onClick={() => handleForwardMessage(r._id)}
-                        className="rounded-lg bg-chat-accent hover:opacity-90 px-3 py-1.5 text-[10px] font-black text-chat-bg shadow-sm"
+                        className="rounded-lg bg-chat-accent hover:opacity-90 px-3 py-1.5 text-[10px] font-bold text-chat-bg shadow-sm"
                       >
                         Send
                       </button>

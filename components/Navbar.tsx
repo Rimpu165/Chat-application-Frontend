@@ -77,7 +77,7 @@ export default function Navbar() {
           <div className="p-1 group-hover:rotate-6 transition-transform">
             <Logo size="sm" />
           </div>
-          <span className="text-xl font-black tracking-tighter text-chat-text uppercase hidden sm:block">Chatiq</span>
+          <span className="text-lg font-bold tracking-tight text-chat-text uppercase hidden sm:block">Chatiq</span>
         </Link>
 
         {/* Desktop Navigation */}
@@ -89,14 +89,14 @@ export default function Navbar() {
                 key={link.href} 
                 href={link.href}
                 className={cn(
-                  "flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-black transition-all relative overflow-hidden group",
+                  "flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all relative overflow-hidden group",
                   isActive ? "text-chat-text bg-chat-raised shadow-md" : "text-chat-muted hover:text-chat-text hover:bg-chat-surface/40"
                 )}
               >
                 <span className={cn("relative transition-transform group-hover:scale-110 flex items-center", isActive && "text-chat-accent")}>
                   {link.icon}
                   {link.name === "Requests" && pendingCount > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 h-3.5 w-3.5 flex items-center justify-center rounded-full bg-red-500 text-white text-[8px] font-black shadow-sm ring-1 ring-white/10">
+                    <span className="absolute -top-1.5 -right-1.5 h-3.5 w-3.5 flex items-center justify-center rounded-full bg-red-500 text-white text-[8px] font-bold shadow-sm ring-1 ring-white/10">
                       {pendingCount}
                     </span>
                   )}
@@ -135,7 +135,7 @@ export default function Navbar() {
                {user.profilePhoto ? (
                  <img src={resolveMediaUrl(user.profilePhoto)} className="h-full w-full object-cover" alt="" />
                ) : (
-                 <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-chat-accent to-blue-600 text-white font-black text-xs uppercase">
+                 <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-chat-accent to-blue-600 text-white font-bold text-xs uppercase">
                     {user.name[0]}
                  </div>
                )}
@@ -165,13 +165,13 @@ export default function Navbar() {
                    {user.profilePhoto ? (
                      <img src={resolveMediaUrl(user.profilePhoto)} className="h-full w-full object-cover" alt="" />
                    ) : (
-                     <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-chat-accent to-blue-600 text-white font-black text-xs uppercase">
+                     <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-chat-accent to-blue-600 text-white font-bold text-xs uppercase">
                         {user.name[0]}
                      </div>
                    )}
                 </div>
                 <div className="hidden lg:block pr-2">
-                   <p className="text-[12px] font-black text-chat-text leading-none">{user.name}</p>
+                   <p className="text-[13px] font-semibold text-chat-text leading-none">{user.name}</p>
                    <div className="flex items-center gap-1.5 mt-1">
                       <span className="h-1.5 w-1.5 rounded-full bg-chat-success shadow-[0_0_5px_currentColor]" />
                       <p className="text-[9px] text-chat-muted font-bold uppercase tracking-wider">Active</p>
@@ -206,12 +206,12 @@ export default function Navbar() {
             <span className={cn("relative transition-transform", isActive ? "scale-110 text-chat-accent" : "scale-100")}>
               {link.icon}
               {link.name === "Requests" && pendingCount > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 h-3.5 w-3.5 flex items-center justify-center rounded-full bg-red-500 text-white text-[8px] font-black shadow-sm ring-1 ring-white/10">
+                <span className="absolute -top-1.5 -right-1.5 h-3.5 w-3.5 flex items-center justify-center rounded-full bg-red-500 text-white text-[8px] font-bold shadow-sm ring-1 ring-white/10">
                   {pendingCount}
                 </span>
               )}
             </span>
-            <span className="text-[9px] font-black tracking-tight">{link.name}</span>
+            <span className="text-[9px] font-medium tracking-tight">{link.name}</span>
             {isActive && (
               <motion.div 
                 layoutId="mobile-navbar-active"
