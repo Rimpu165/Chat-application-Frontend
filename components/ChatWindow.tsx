@@ -24,7 +24,9 @@ import {
   Languages,
   Search,
   Pin,
-  CornerUpRight
+  CornerUpRight,
+  Clock,
+  Smile
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -34,6 +36,53 @@ import { motion, AnimatePresence } from "framer-motion";
 interface ChatWindowProps {
   room: any;
   onClose: () => void;
+}
+
+const LOCAL_GIF_POOL = [
+  { url: "https://media.giphy.com/media/3NtY188QaxDdC/giphy.gif", tags: ["happy", "dance", "celebrate", "party"] },
+  { url: "https://media.giphy.com/media/26n6Gx9wEIndtvJFU/giphy.gif", tags: ["lol", "laugh", "funny", "haha"] },
+  { url: "https://media.giphy.com/media/l0EwYc29XZnLR2pNu/giphy.gif", tags: ["love", "heart", "cute", "kiss"] },
+  { url: "https://media.giphy.com/media/9Y5BbDSkSTiY8/giphy.gif", tags: ["sad", "cry", "tears", "depressed"] },
+  { url: "https://media.giphy.com/media/26ufdipQqU2lhNA4g/giphy.gif", tags: ["mindblown", "wow", "shock", "omg"] },
+  { url: "https://media.giphy.com/media/11tI5GGi6C36Mw/giphy.gif", tags: ["angry", "mad", "rage", "hate"] },
+  { url: "https://media.giphy.com/media/14412MUKmbQquk/giphy.gif", tags: ["dance", "music", "groove"] },
+  { url: "https://media.giphy.com/media/3o72F8t9TDi2xVnxOE/giphy.gif", tags: ["shocked", "wow", "surprised"] },
+  { url: "https://media.giphy.com/media/NEvPzZxiqDYyI/giphy.gif", tags: ["yes", "nod", "agree", "correct"] },
+  { url: "https://media.giphy.com/media/13CoXDiaCcX2uI/giphy.gif", tags: ["shrug", "maybe", "whatever", "dunno"] },
+  { url: "https://media.giphy.com/media/H45uY4mAF27yPzBSpu/giphy.gif", tags: ["thumbsup", "good", "like", "ok"] },
+  { url: "https://media.giphy.com/media/l41YkxvU8c7jt7C1y/giphy.gif", tags: ["facepalm", "sigh", "disappoint"] },
+];
+
+const searchLocalGifs = (query: string) => {
+  if (!query) return LOCAL_GIF_POOL.map(g => g.url);
+  const terms = query.toLowerCase().split(" ");
+  return LOCAL_GIF_POOL.filter(g => 
+    g.tags.some(tag => terms.some(term => tag.includes(term)))
+  ).map(g => g.url);
+};
+
+function VanishTimer({ message }: { message: any }) {
+  const seenTime = message.seenAt ? new Date(message.seenAt).getTime() : new Date().getTime();
+  const expireTime = seenTime + message.vanishTime * 1000;
+  const [secondsLeft, setSecondsLeft] = useState(Math.max(0, Math.round((expireTime - Date.now()) / 1000)));
+
+  useEffect(() => {
+    if (secondsLeft <= 0) return;
+    const timer = setInterval(() => {
+      const left = Math.max(0, Math.round((expireTime - Date.now()) / 1000));
+      setSecondsLeft(left);
+      if (left <= 0) clearInterval(timer);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [expireTime, secondsLeft]);
+
+  if (secondsLeft <= 0) return null;
+
+  return (
+    <span className="ml-2 inline-flex items-center gap-1 rounded bg-red-500/25 px-1.5 py-0.5 text-[9px] font-bold text-red-200 animate-pulse">
+      ⏱️ {secondsLeft}s
+    </span>
+  );
 }
 
 export default function ChatWindow({ room, onClose }: ChatWindowProps) {
@@ -86,6 +135,21 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
   const [activeTranslateMenuId, setActiveTranslateMenuId] = useState<string | null>(null);
   const [showSearchBar, setShowSearchBar] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+
+  // --- Vanishing and GIF States ---
+  const [vanishTime, setVanishTime] = useState<number>(0);
+  const [showVanishMenu, setShowVanishMenu] = useState(false);
+  const [showGifKeyboard, setShowGifKeyboard] = useState(false);
+  const [gifSearchQuery, setGifSearchQuery] = useState("");
+  const [gifResults, setGifResults] = useState<string[]>([]);
+  const [isSearchingGifs, setIsSearchingGifs] = useState(false);
+
+  const vanishOptions = [
+    { label: "Vanish Off", value: 0 },
+    { label: "10 seconds", value: 10 },
+    { label: "30 seconds", value: 30 },
+    { label: "1 minute", value: 60 },
+  ];
 
   // --- Pinning and Forwarding States ---
   const [showPinnedDrawer, setShowPinnedDrawer] = useState(false);
@@ -211,11 +275,18 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
           prev.map((m) => {
             const sid = senderIdOf(m);
             const msgTime = m?.createdAt ? new Date(m.createdAt).getTime() : 0;
-            return sid === user?._id && msgTime <= seenAtMs ? { ...m, status: "seen" } : m;
+            return sid === user?._id && msgTime <= seenAtMs ? { ...m, status: "seen", seenAt } : m;
           })
         );
       };
+      const handleMessageVanished = ({ messageId, roomId: vRoomId }: { messageId: string, roomId: string }) => {
+        if (String(vRoomId) === String(room._id)) {
+          setMessages((prev) => prev.filter((m) => m._id !== messageId));
+        }
+      };
+
       socket.on("messagesSeen", handleMessagesSeen);
+      socket.on("messageVanished", handleMessageVanished);
 
       return () => {
         socket.emit("leaveRoom", room._id);
@@ -229,6 +300,7 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
         socket.off("callEnded", handleCallEnded);
         socket.off("chatCleared", handleChatCleared);
         socket.off("messagesSeen", handleMessagesSeen);
+        socket.off("messageVanished", handleMessageVanished);
         socket.off("messagePinToggled", handlePinToggled);
       };
     }
@@ -343,6 +415,51 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
     }
   };
 
+  // --- Giphy Fetch Effect ---
+  useEffect(() => {
+    if (!showGifKeyboard) return;
+    
+    const key = process.env.NEXT_PUBLIC_GIPHY_API_KEY;
+    if (!key) {
+      const query = gifSearchQuery.trim();
+      const results = searchLocalGifs(query);
+      setGifResults(results);
+      return;
+    }
+
+    let active = true;
+    const fetchGifs = async () => {
+      setIsSearchingGifs(true);
+      try {
+        const query = gifSearchQuery.trim();
+        const url = query 
+          ? `https://api.giphy.com/v1/gifs/search?api_key=${key}&q=${encodeURIComponent(query)}&limit=12`
+          : `https://api.giphy.com/v1/gifs/trending?api_key=${key}&limit=12`;
+        const response = await fetch(url);
+        const data = await response.json();
+        if (active && data.data) {
+          const urls = data.data.map((gif: any) => gif.images?.fixed_height_downsampled?.url || gif.images?.fixed_height?.url).filter(Boolean);
+          setGifResults(urls);
+        }
+      } catch (err) {
+        console.error("Giphy API error, falling back to local:", err);
+        const results = searchLocalGifs(gifSearchQuery.trim());
+        setGifResults(results);
+      } finally {
+        if (active) setIsSearchingGifs(false);
+      }
+    };
+
+    const delayDebounceFn = setTimeout(() => {
+      fetchGifs();
+    }, 400);
+
+    return () => {
+      active = false;
+      clearTimeout(delayDebounceFn);
+    };
+  }, [gifSearchQuery, showGifKeyboard]);
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim()) return;
@@ -353,6 +470,7 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
       formData.append("message", newMessage);
       if (replyTo?._id) formData.append("replyTo", replyTo._id);
       if (file) formData.append("file", file);
+      if (vanishTime > 0) formData.append("vanishTime", vanishTime.toString());
       await API.post("/messages/send", formData);
       setNewMessage("");
       setFile(null);
@@ -361,6 +479,24 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
       if (socket) socket.emit("stopTyping", { roomId: room._id });
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Failed to send message");
+    }
+  };
+
+  const handleSendGif = async (gifUrl: string) => {
+    try {
+      const formData = new FormData();
+      formData.append("roomId", room._id);
+      formData.append("message", "");
+      formData.append("fileUrl", gifUrl);
+      formData.append("fileType", "image");
+      formData.append("fileName", "GIPHY GIF");
+      if (vanishTime > 0) formData.append("vanishTime", vanishTime.toString());
+      await API.post("/messages/send", formData);
+      setShowGifKeyboard(false);
+      setGifSearchQuery("");
+      fetchSendStatus();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to send GIF");
     }
   };
 
@@ -1093,11 +1229,17 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
                     ))}
                    </div>
                    <div className={cn(
-                     "mt-1 flex items-center justify-end gap-1.5 text-[9px]",
-                     isMe ? "text-white/70" : "text-chat-muted"
-                   )}>
-                     {msg.isPinned && <Pin className="h-2.5 w-2.5 rotate-45 text-chat-accent shrink-0" />}
-                     {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      "mt-1 flex items-center justify-end gap-1.5 text-[9px]",
+                      isMe ? "text-white/70" : "text-chat-muted"
+                    )}>
+                      {msg.isPinned && <Pin className="h-2.5 w-2.5 rotate-45 text-chat-accent shrink-0" />}
+                      {msg.vanishTime > 0 && msg.status === "seen" && (
+                        <VanishTimer message={msg} />
+                      )}
+                      {msg.vanishTime > 0 && msg.status !== "seen" && (
+                        <span className="text-amber-400 font-bold ml-1" title={`Vanishes ${msg.vanishTime}s after seen`}>🔥</span>
+                      )}
+                      {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                      {isMe &&
                        (msg.status === "seen" ? (
                          <CheckCheck className="h-3 w-3 text-white" aria-hidden />
@@ -1235,7 +1377,7 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
             ) : null}
           </div>
         ) : (
-          <form onSubmit={handleSendMessage} className="relative mx-auto flex max-w-4xl items-center gap-2 sm:gap-3">
+          <form onSubmit={handleSendMessage} className="relative mx-auto flex max-w-4xl items-center gap-2 sm:gap-3 w-full">
             {replyTo && (
               <div className="absolute -top-11 left-0 right-0 mx-auto flex max-w-4xl items-center justify-between rounded-xl border border-chat-border bg-chat-surface px-3 py-2 text-xs text-chat-text">
                 <span className="truncate pr-2">Replying to: {replyTo.message?.slice(0, 60)}</span>
@@ -1250,6 +1392,43 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
                 onChange={handleInputChange}
                 className="min-w-0 flex-1 bg-transparent py-2 text-sm text-chat-text placeholder:text-chat-muted focus:outline-none"
               />
+              
+              <button
+                type="button"
+                title="GIF keyboard"
+                onClick={() => {
+                  setShowGifKeyboard((prev) => !prev);
+                  setShowVanishMenu(false);
+                }}
+                className={cn(
+                  "p-2 text-chat-muted transition-colors hover:text-chat-accent",
+                  showGifKeyboard && "text-chat-accent"
+                )}
+              >
+                <Smile className="h-5 w-5" />
+              </button>
+
+              <button
+                type="button"
+                title="Vanish Timer"
+                onClick={() => {
+                  setShowVanishMenu((prev) => !prev);
+                  setShowGifKeyboard(false);
+                }}
+                className={cn(
+                  "p-2 text-chat-muted transition-colors hover:text-chat-accent relative",
+                  vanishTime > 0 && "text-red-400"
+                )}
+              >
+                <Clock className="h-5 w-5" />
+                {vanishTime > 0 && (
+                  <span className="absolute top-1 right-1 flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                  </span>
+                )}
+              </button>
+
               <label title="Attach file" className="cursor-pointer p-2 text-chat-muted transition-colors hover:text-chat-accent">
                 <Paperclip className="h-5 w-5" />
                 <input aria-label="Attach file" type="file" className="hidden" onChange={(e) => setFile(e.target.files?.[0] || null)} />
@@ -1263,6 +1442,77 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
             >
               <Send className="h-5 w-5 translate-x-0.5 -translate-y-0.5 transition-transform group-hover:scale-110" />
             </button>
+
+            {/* Vanish Timer Popover */}
+            {showVanishMenu && (
+              <div className="absolute bottom-16 right-16 z-30 w-40 rounded-xl border border-chat-border bg-chat-surface p-1.5 shadow-2xl">
+                <p className="px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-chat-muted">Vanish Timer</p>
+                {vanishOptions.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => {
+                      setVanishTime(opt.value);
+                      setShowVanishMenu(false);
+                      toast.success(opt.value > 0 ? `Vanish Mode: ${opt.label}` : "Vanish Mode disabled");
+                    }}
+                    className={cn(
+                      "flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-xs font-semibold text-chat-text hover:bg-chat-raised",
+                      vanishTime === opt.value && "bg-chat-raised text-chat-accent"
+                    )}
+                  >
+                    <span>{opt.label}</span>
+                    {vanishTime === opt.value && <span className="text-[10px]">🔥</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* GIF Keyboard Popover */}
+            {showGifKeyboard && (
+              <div className="absolute bottom-16 left-4 right-4 z-30 max-w-sm rounded-2xl border border-chat-border bg-chat-surface p-4 shadow-2xl flex flex-col h-64">
+                <div className="flex items-center gap-2 mb-3">
+                  <input
+                    type="text"
+                    placeholder="Search GIFs..."
+                    value={gifSearchQuery}
+                    onChange={(e) => setGifSearchQuery(e.target.value)}
+                    className="w-full bg-chat-bg border border-chat-border rounded-xl py-1.5 px-3 text-xs focus:outline-none focus:border-chat-accent/50"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowGifKeyboard(false);
+                      setGifSearchQuery("");
+                    }}
+                    className="text-xs text-chat-muted hover:text-chat-text font-bold"
+                  >
+                    Close
+                  </button>
+                </div>
+                <div className="grid grid-cols-3 gap-2 overflow-y-auto flex-1 custom-scrollbar">
+                  {isSearchingGifs ? (
+                    <div className="col-span-3 flex items-center justify-center py-10 text-xs text-chat-muted">
+                      Searching...
+                    </div>
+                  ) : gifResults.length === 0 ? (
+                    <div className="col-span-3 flex items-center justify-center py-10 text-xs text-chat-muted">
+                      No GIFs found
+                    </div>
+                  ) : (
+                    gifResults.map((url, idx) => (
+                      <div
+                        key={idx}
+                        onClick={() => handleSendGif(url)}
+                        className="h-16 rounded-lg overflow-hidden border border-black/5 dark:border-white/5 cursor-pointer hover:scale-105 transition-transform relative group bg-chat-bg"
+                      >
+                        <img src={url} className="h-full w-full object-cover" alt="GIF" />
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
           </form>
         )}
       </footer>

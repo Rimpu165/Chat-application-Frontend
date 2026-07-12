@@ -64,6 +64,10 @@ export default function Home() {
   const [chatSearch, setChatSearch] = useState("");
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
 
+  const [messagesToday, setMessagesToday] = useState(0);
+  const [newConnections, setNewConnections] = useState(0);
+  const [dynamicActivityFeed, setDynamicActivityFeed] = useState<any[]>([]);
+
   // Mock Data Store
   const [mockChats, setMockChats] = useState<Record<string, MockChat>>({
     alice: {
@@ -136,16 +140,21 @@ export default function Home() {
     if (user?._id) {
       const fetchDashboardData = async () => {
         try {
-          const [profileRes, friendsRes, roomsRes, pendingRes] = await Promise.all([
+          const [profileRes, friendsRes, roomsRes, pendingRes, statsRes, activityRes] = await Promise.all([
             API.get("/auth/profile"),
             API.get("/friends/list"),
             API.get("/rooms"),
-            API.get("/friends/pending")
+            API.get("/friends/pending"),
+            API.get("/users/stats").catch(() => ({ data: { messagesToday: 0, newConnections: 0 } })),
+            API.get("/users/activity").catch(() => ({ data: [] }))
           ]);
           updateUser(profileRes.data);
           setFriendsList(friendsRes.data);
           setRoomsList(roomsRes.data.filter((r: any) => r.isGroup));
           setPendingRequests(pendingRes.data);
+          setMessagesToday(statsRes.data.messagesToday || 0);
+          setNewConnections(statsRes.data.newConnections || 0);
+          setDynamicActivityFeed(activityRes.data || []);
         } catch (err) {
           console.error("Failed to fetch fresh profile and friends data:", err);
         }
@@ -223,19 +232,27 @@ export default function Home() {
     const isLive = onlineUsers.includes(user._id);
 
     // Recent activity feed data
-    const activityFeed = [
-      { id: 1, type: "message", text: "Rishabh Sinha sent you a message", time: "1h ago", icon: <MessageSquare className="w-4 h-4 text-blue-400" />, iconBg: "bg-blue-500/10" },
-      ...(pendingRequests.map((req, idx) => ({
-        id: `req-${idx}`,
-        type: "request",
-        text: `${req.fromUser?.name || "Someone"} sent you a connection request`,
-        time: "2h ago",
-        icon: <UserPlus className="w-4 h-4 text-amber-500" />,
-        iconBg: "bg-amber-500/10"
-      }))),
-      { id: 3, type: "join", text: "New member joined Global Chat", time: "3h ago", icon: <Users className="w-4 h-4 text-purple-400" />, iconBg: "bg-purple-500/10" },
-      { id: 4, type: "accept", text: "Sarah Jenkins accepted your request", time: "5h ago", icon: <Check className="w-4 h-4 text-teal-400" />, iconBg: "bg-teal-500/10" }
-    ].slice(0, 4);
+    const activityFeed = dynamicActivityFeed.map((act) => {
+      let icon = <MessageSquare className="w-4 h-4 text-blue-400" />;
+      let iconBg = "bg-blue-500/10";
+
+      if (act.type === "request") {
+        icon = <UserPlus className="w-4 h-4 text-amber-500" />;
+        iconBg = "bg-amber-500/10";
+      } else if (act.type === "accept") {
+        icon = <Check className="w-4 h-4 text-teal-400" />;
+        iconBg = "bg-teal-500/10";
+      } else if (act.type === "call") {
+        icon = <Video className="w-4 h-4 text-purple-400" />;
+        iconBg = "bg-purple-500/10";
+      }
+
+      return {
+        ...act,
+        icon,
+        iconBg
+      };
+    });
 
     return (
       <div className="min-h-screen bg-chat-bg text-chat-text overflow-x-hidden relative">
@@ -270,7 +287,7 @@ export default function Home() {
                   </div>
                   <div>
                      <p className="text-[10px] text-chat-muted font-bold uppercase tracking-wider">Messages Today</p>
-                     <p className="text-lg font-bold mt-0.5">28</p>
+                     <p className="text-lg font-bold mt-0.5">{messagesToday}</p>
                   </div>
                </div>
                <div className="p-4.5 rounded-2xl bg-white/60 dark:bg-chat-surface/40 border border-black/10 dark:border-chat-border hover:border-chat-accent/40 hover:-translate-y-1 hover:shadow-lg transition-all duration-300 flex items-center gap-4 group">
@@ -288,7 +305,7 @@ export default function Home() {
                   </div>
                   <div>
                      <p className="text-[10px] text-chat-muted font-bold uppercase tracking-wider">New Connections</p>
-                     <p className="text-lg font-bold mt-0.5">4</p>
+                     <p className="text-lg font-bold mt-0.5">{newConnections}</p>
                   </div>
                </div>
                <div className="p-4.5 rounded-2xl bg-white/60 dark:bg-chat-surface/40 border border-black/10 dark:border-chat-border hover:border-chat-accent/40 hover:-translate-y-1 hover:shadow-lg transition-all duration-300 flex items-center gap-4 group">
@@ -579,22 +596,28 @@ export default function Home() {
                  </div>
                  
                  <div className="space-y-4">
-                    {activityFeed.map((act) => (
-                       <div key={act.id} className="flex items-center justify-between border-b border-chat-border/30 pb-3 last:border-0 last:pb-0">
-                          <div className="flex items-center gap-3.5">
-                             <div className={cn("p-2 rounded-xl shrink-0 flex items-center justify-center", act.iconBg)}>
-                                {act.icon}
-                             </div>
-                             <span className="text-xs font-semibold text-chat-text leading-tight">
-                                {act.text}
-                             </span>
-                          </div>
-                          <span className="text-[10px] text-chat-muted font-black whitespace-nowrap pl-2">
-                             {act.time}
-                          </span>
-                       </div>
-                    ))}
-                 </div>
+                     {activityFeed.length === 0 ? (
+                        <div className="w-full text-center py-6">
+                           <p className="text-chat-muted text-xs font-semibold">No recent activity found.</p>
+                        </div>
+                     ) : (
+                        activityFeed.map((act) => (
+                           <div key={act.id} className="flex items-center justify-between border-b border-chat-border/30 pb-3 last:border-0 last:pb-0">
+                              <div className="flex items-center gap-3.5">
+                                 <div className={cn("p-2 rounded-xl shrink-0 flex items-center justify-center", act.iconBg)}>
+                                    {act.icon}
+                                 </div>
+                                 <span className="text-xs font-semibold text-chat-text leading-tight">
+                                    {act.text}
+                                 </span>
+                              </div>
+                              <span className="text-[10px] text-chat-muted font-black whitespace-nowrap pl-2">
+                                 {act.time}
+                              </span>
+                           </div>
+                        ))
+                     )}
+                  </div>
               </div>
 
               {/* Chatiq Network Activity (Pulse metrics + Stats) */}
