@@ -12,12 +12,13 @@ import ThemeToggle from "@/components/ThemeToggle";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
-import { resolveMediaUrl } from "@/lib/utils";
+import { resolveMediaUrl, cn } from "@/lib/utils";
 import Logo from "@/components/Logo";
 import { useAuth } from "@/context/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSocket } from "@/context/SocketContext";
 import API from "@/lib/api";
+import toast from "react-hot-toast";
 
 interface MockMessage {
   id: number;
@@ -43,6 +44,13 @@ export default function Home() {
   const router = useRouter();
   const [scrolled, setScrolled] = useState(false);
 
+  const handleCopyInviteLink = () => {
+    if (typeof window !== "undefined") {
+      navigator.clipboard.writeText(`${window.location.origin}/users`);
+      toast.success("Invite link copied to clipboard!");
+    }
+  };
+
   // MOCK INTERACTIVE LANDING PAGE STATES
   const [mockTab, setMockTab] = useState<"chats" | "friends">("chats");
   const [friendsList, setFriendsList] = useState<any[]>([]);
@@ -56,6 +64,10 @@ export default function Home() {
   const [chatSearch, setChatSearch] = useState("");
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
 
+  const [messagesToday, setMessagesToday] = useState(0);
+  const [newConnections, setNewConnections] = useState(0);
+  const [dynamicActivityFeed, setDynamicActivityFeed] = useState<any[]>([]);
+
   // Mock Data Store
   const [mockChats, setMockChats] = useState<Record<string, MockChat>>({
     alice: {
@@ -66,7 +78,7 @@ export default function Home() {
       status: "online",
       bio: "UX Designer at Apple • Designing the future of communication",
       messages: [
-        { id: 1, text: "Hey! Did you check the new Nexora design files?", isMe: false, time: "10:14 AM" },
+        { id: 1, text: "Hey! Did you check the new Chatiq design files?", isMe: false, time: "10:14 AM" },
         { id: 2, text: "Yes! The glassmorphism and Apple-like blurs look absolutely stunning.", isMe: true, time: "10:15 AM" },
         { id: 3, text: "Exactly! Try sending me a message here to test the real-time sync.", isMe: false, time: "10:15 AM" },
       ]
@@ -128,16 +140,21 @@ export default function Home() {
     if (user?._id) {
       const fetchDashboardData = async () => {
         try {
-          const [profileRes, friendsRes, roomsRes, pendingRes] = await Promise.all([
+          const [profileRes, friendsRes, roomsRes, pendingRes, statsRes, activityRes] = await Promise.all([
             API.get("/auth/profile"),
             API.get("/friends/list"),
             API.get("/rooms"),
-            API.get("/friends/pending")
+            API.get("/friends/pending"),
+            API.get("/users/stats").catch(() => ({ data: { messagesToday: 0, newConnections: 0 } })),
+            API.get("/users/activity").catch(() => ({ data: [] }))
           ]);
           updateUser(profileRes.data);
           setFriendsList(friendsRes.data);
           setRoomsList(roomsRes.data.filter((r: any) => r.isGroup));
           setPendingRequests(pendingRes.data);
+          setMessagesToday(statsRes.data.messagesToday || 0);
+          setNewConnections(statsRes.data.newConnections || 0);
+          setDynamicActivityFeed(activityRes.data || []);
         } catch (err) {
           console.error("Failed to fetch fresh profile and friends data:", err);
         }
@@ -213,31 +230,94 @@ export default function Home() {
   // LOGGED IN DASHBOARD VIEW (PRESERVED)
   if (user) {
     const isLive = onlineUsers.includes(user._id);
+
+    // Recent activity feed data
+    const activityFeed = dynamicActivityFeed.map((act) => {
+      let icon = <MessageSquare className="w-4 h-4 text-blue-400" />;
+      let iconBg = "bg-blue-500/10";
+
+      if (act.type === "request") {
+        icon = <UserPlus className="w-4 h-4 text-amber-500" />;
+        iconBg = "bg-amber-500/10";
+      } else if (act.type === "accept") {
+        icon = <Check className="w-4 h-4 text-teal-400" />;
+        iconBg = "bg-teal-500/10";
+      } else if (act.type === "call") {
+        icon = <Video className="w-4 h-4 text-purple-400" />;
+        iconBg = "bg-purple-500/10";
+      }
+
+      return {
+        ...act,
+        icon,
+        iconBg
+      };
+    });
+
     return (
       <div className="min-h-screen bg-chat-bg text-chat-text overflow-x-hidden relative">
         <div className="absolute top-0 right-0 w-[50%] h-[40%] bg-blue-600/5 blur-[120px] rounded-full pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-[30%] h-[40%] bg-purple-600/5 blur-[120px] rounded-full pointer-events-none" />
 
-        <main className="max-w-screen-2xl mx-auto px-6 pt-32 pb-20">
-           
-           <header className="mb-12">
+        <main className="max-w-screen-2xl mx-auto px-4 md:px-6 pt-24 md:pt-32 pb-24 md:pb-20">
+              <header className="mb-6 md:mb-8">
               <motion.h1 
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="text-5xl md:text-7xl font-black tracking-tighter mb-4 text-chat-text"
+                className="text-xl sm:text-3xl md:text-5xl font-extrabold tracking-tight mb-2 md:mb-3 text-chat-text"
               >
                 Welcome back, <br/>
                 <span className="bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">{user.name}</span>
               </motion.h1>
-              <div className="flex flex-wrap gap-4 mt-8">
-                 <Link href="/chat" className="flex items-center gap-3 px-8 h-14 rounded-3xl bg-blue-600 text-white font-black text-lg hover:bg-blue-500 transition-all shadow-xl shadow-blue-600/20 active:scale-95 group">
-                    <MessageSquare className="h-5 w-5 group-hover:rotate-12 transition-transform" /> Chat Now
+              <div className="flex flex-wrap gap-2.5 mt-4 md:mt-6">
+                 <Link href="/chat" className="flex items-center gap-2 px-5 md:px-6 h-10 md:h-12 rounded-xl md:rounded-2xl bg-blue-600 text-white font-semibold text-xs md:text-sm hover:bg-blue-500 transition-all shadow-xl shadow-blue-600/20 active:scale-95 group">
+                    <MessageSquare className="h-4 w-4 md:h-4.5 md:w-4.5 group-hover:rotate-12 transition-transform" /> Chat Now
                  </Link>
-                 <Link href="/users" className="flex items-center gap-3 px-8 h-14 rounded-3xl bg-chat-raised border border-chat-border text-chat-text font-black text-lg hover:bg-chat-surface transition-all active:scale-95 group">
-                    <Users className="h-5 w-5 group-hover:scale-110 transition-transform" /> Explore People
+                 <Link href="/users" className="flex items-center gap-2 px-5 md:px-6 h-10 md:h-12 rounded-xl md:rounded-2xl bg-chat-raised border border-chat-border text-chat-text font-semibold text-xs md:text-sm hover:bg-chat-surface transition-all active:scale-95 group">
+                    <Users className="h-4 w-4 md:h-4.5 md:w-4.5 group-hover:scale-110 transition-transform" /> Explore People
                  </Link>
               </div>
-           </header>
+            </header>
+
+            {/* Quick Stats Row */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8 md:mb-10">
+               <div className="p-4.5 rounded-2xl bg-white/60 dark:bg-chat-surface/40 border border-black/10 dark:border-chat-border hover:border-chat-accent/40 hover:-translate-y-1 hover:shadow-lg transition-all duration-300 flex items-center gap-4 group">
+                  <div className="bg-blue-500/10 p-2.5 rounded-xl text-blue-500 group-hover:scale-110 transition-transform">
+                     <MessageSquare className="h-4.5 w-4.5" />
+                  </div>
+                  <div>
+                     <p className="text-[10px] text-chat-muted font-bold uppercase tracking-wider">Messages Today</p>
+                     <p className="text-lg font-bold mt-0.5">{messagesToday}</p>
+                  </div>
+               </div>
+               <div className="p-4.5 rounded-2xl bg-white/60 dark:bg-chat-surface/40 border border-black/10 dark:border-chat-border hover:border-chat-accent/40 hover:-translate-y-1 hover:shadow-lg transition-all duration-300 flex items-center gap-4 group">
+                  <div className="bg-amber-500/10 p-2.5 rounded-xl text-amber-500 group-hover:scale-110 transition-transform">
+                     <UserPlus className="h-4.5 w-4.5" />
+                  </div>
+                  <div>
+                     <p className="text-[10px] text-chat-muted font-bold uppercase tracking-wider">Pending Requests</p>
+                     <p className="text-lg font-bold mt-0.5">{pendingRequests.length}</p>
+                  </div>
+               </div>
+               <div className="p-4.5 rounded-2xl bg-white/60 dark:bg-chat-surface/40 border border-black/10 dark:border-chat-border hover:border-chat-accent/40 hover:-translate-y-1 hover:shadow-lg transition-all duration-300 flex items-center gap-4 group">
+                  <div className="bg-teal-500/10 p-2.5 rounded-xl text-teal-400 group-hover:scale-110 transition-transform">
+                     <Zap className="h-4.5 w-4.5" />
+                  </div>
+                  <div>
+                     <p className="text-[10px] text-chat-muted font-bold uppercase tracking-wider">New Connections</p>
+                     <p className="text-lg font-bold mt-0.5">{newConnections}</p>
+                  </div>
+               </div>
+               <div className="p-4.5 rounded-2xl bg-white/60 dark:bg-chat-surface/40 border border-black/10 dark:border-chat-border hover:border-chat-accent/40 hover:-translate-y-1 hover:shadow-lg transition-all duration-300 flex items-center gap-4 group">
+                  <div className="bg-purple-500/10 p-2.5 rounded-xl text-purple-400 group-hover:scale-110 transition-transform">
+                     <LayoutGrid className="h-4.5 w-4.5" />
+                  </div>
+                  <div>
+                     <p className="text-[10px] text-chat-muted font-bold uppercase tracking-wider">Communities Joined</p>
+                     <p className="text-lg font-bold mt-0.5">{roomsList.length}</p>
+                  </div>
+               </div>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                {/* Pending Invitations Alert */}
@@ -259,45 +339,45 @@ export default function Home() {
                )}
 
                {/* Quick Links */}
-              <Link href="/requests" className="lg:col-span-2 p-8 rounded-[40px] bg-white/60 dark:bg-chat-surface/40 border border-black/10 dark:border-chat-border flex flex-col justify-between hover:border-black/20 dark:hover:border-chat-muted transition-all group overflow-hidden relative">
-                 <div className="absolute top-0 right-0 p-8 text-chat-border group-hover:text-blue-500/20 transition-colors">
-                    <UserPlus className="h-24 w-24" />
+              <Link href="/requests" className="lg:col-span-2 p-4 md:p-8 rounded-2xl md:rounded-[40px] bg-white/60 dark:bg-chat-surface/40 border border-black/10 dark:border-chat-border flex flex-col justify-between hover:-translate-y-1.5 hover:shadow-2xl dark:hover:shadow-black/40 hover:border-chat-accent/30 transition-all duration-300 group overflow-hidden relative">
+                 <div className="absolute top-0 right-0 p-4 md:p-8 text-chat-border/20 md:text-chat-border group-hover:text-blue-500/20 transition-colors pointer-events-none">
+                    <UserPlus className="h-12 w-12 md:h-24 md:w-24" />
                  </div>
                  <div>
-                    <h3 className="text-2xl font-bold mb-2">Network Requests</h3>
-                    <p className="text-chat-muted text-sm font-medium">Manage your friend requests and connections.</p>
+                    <h3 className="text-lg md:text-2xl font-bold mb-1 md:mb-2">Network Requests</h3>
+                    <p className="text-chat-muted text-xs md:text-sm font-medium">Manage your friend requests and connections.</p>
                  </div>
-                 <div className="mt-8 flex items-center gap-2 text-blue-400 font-bold text-sm">
-                    Go Manage <ArrowRight className="h-4 w-4" />
-                 </div>
+                 <div className="mt-6 md:mt-8 flex items-center gap-1.5 md:gap-2 text-blue-400 font-bold text-xs md:text-sm">
+                    Go Manage <ArrowRight className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                  </div>
               </Link>
 
-              <Link href="/groups" className="p-8 rounded-[40px] bg-white/60 dark:bg-chat-surface/40 border border-black/10 dark:border-chat-border flex flex-col justify-between hover:border-black/20 dark:hover:border-chat-muted transition-all group grow">
-                 <div className="bg-purple-500/10 p-3 rounded-2xl w-fit mb-6 text-purple-400">
-                    <LayoutGrid className="h-6 w-6" />
-                 </div>
-                 <div>
-                    <h3 className="text-xl font-bold">Communities</h3>
-                    <p className="text-chat-muted text-xs mt-1">Join or start global groups.</p>
-                 </div>
+              <Link href="/groups" className="p-4 md:p-8 rounded-2xl md:rounded-[40px] bg-white/60 dark:bg-chat-surface/40 border border-black/10 dark:border-chat-border flex flex-col justify-between hover:-translate-y-1.5 hover:shadow-2xl dark:hover:shadow-black/40 hover:border-chat-accent/30 transition-all duration-300 group grow">
+                  <div className="bg-purple-500/10 p-2.5 md:p-3 rounded-xl md:rounded-2xl w-fit mb-4 md:mb-6 text-purple-400">
+                     <LayoutGrid className="h-5 w-5 md:h-6 md:w-6" />
+                  </div>
+                  <div>
+                     <h3 className="text-lg font-bold">Communities</h3>
+                     <p className="text-chat-muted text-[10px] md:text-xs mt-1">Join or start global groups.</p>
+                  </div>
               </Link>
 
-              <Link href="/profile" className="p-8 rounded-[40px] bg-white/60 dark:bg-chat-surface/40 border border-black/10 dark:border-chat-border flex flex-col justify-between hover:border-black/20 dark:hover:border-chat-muted transition-all group grow">
-                 <div className="bg-teal-500/10 p-3 rounded-2xl w-fit mb-6 text-teal-400">
-                    <ImageIcon className="h-6 w-6" />
-                 </div>
-                 <div>
-                    <h3 className="text-xl font-bold">Galleria</h3>
-                    <p className="text-chat-muted text-xs mt-1">Manage your social showcase.</p>
-                 </div>
+              <Link href="/profile" className="p-4 md:p-8 rounded-2xl md:rounded-[40px] bg-white/60 dark:bg-chat-surface/40 border border-black/10 dark:border-chat-border flex flex-col justify-between hover:-translate-y-1.5 hover:shadow-2xl dark:hover:shadow-black/40 hover:border-chat-accent/30 transition-all duration-300 group grow">
+                  <div className="bg-teal-500/10 p-2.5 md:p-3 rounded-xl md:rounded-2xl w-fit mb-4 md:mb-6 text-teal-400">
+                     <ImageIcon className="h-5 w-5 md:h-6 md:w-6" />
+                  </div>
+                  <div>
+                     <h3 className="text-lg font-bold">Galleria</h3>
+                     <p className="text-chat-muted text-[10px] md:text-xs mt-1">Manage your social showcase.</p>
+                  </div>
               </Link>
 
               {/* Status Section */}
-              <div className="lg:col-span-3 p-8 rounded-[40px] bg-blue-600/5 border border-blue-500/20 grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div className="lg:col-span-3 p-4 md:p-8 rounded-2xl md:rounded-[40px] bg-blue-600/5 border border-blue-500/20 grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
                 <div className="space-y-1">
                    <p className="text-xs font-black uppercase text-blue-400 tracking-widest">Network Status</p>
                    <p className="text-2xl font-bold leading-tight">
-                     Your Nexora presence is currently{" "}
+                     Your Chatiq presence is currently{" "}
                      <span className={isLive ? "text-blue-400 dark:text-blue-300 font-bold" : "text-chat-muted font-bold"}>
                        {isLive ? "Live" : "Offline"}
                      </span>
@@ -306,6 +386,11 @@ export default function Home() {
                 <div className="flex flex-col justify-center">
                    <p className="text-chat-muted text-xs font-bold uppercase mb-1">Total Connections</p>
                    <p className="text-3xl font-black">{user.friends?.length || 0}</p>
+                   {(!user.friends || user.friends.length === 0) && (
+                     <Link href="/users" className="text-[10px] font-black text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1 mt-1">
+                       Find People <ArrowRight className="w-3 h-3" />
+                     </Link>
+                   )}
                 </div>
                 <div className="flex flex-col justify-center">
                    <p className="text-chat-muted text-xs font-bold uppercase mb-1">Items in Gallery</p>
@@ -313,7 +398,7 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="p-8 rounded-[40px] bg-linear-to-br from-blue-600 to-indigo-600 text-white flex flex-col justify-center relative overflow-hidden active:scale-[0.98] cursor-pointer" onClick={() => router.push("/chat")}>
+              <div className="p-6 md:p-8 rounded-[28px] md:rounded-[40px] bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex flex-col justify-center relative overflow-hidden hover:-translate-y-1.5 hover:shadow-2xl transition-all duration-300 active:scale-[0.98] cursor-pointer" onClick={() => router.push("/chat")}>
                  <div className="absolute -right-4 -bottom-4 opacity-10">
                     <Globe className="h-32 w-32" />
                  </div>
@@ -321,8 +406,8 @@ export default function Home() {
                  <p className="text-white/70 text-xs">Jump back into your messages.</p>
               </div>
 
-              {/* Online Friends Widget */}
-              <div className="lg:col-span-2 p-8 rounded-[40px] bg-white/60 dark:bg-chat-surface/40 border border-black/10 dark:border-chat-border flex flex-col justify-between shadow-[0_8px_30px_rgba(0,0,0,0.02)]">
+              {/* Active Connections List Widget */}
+              <div className="lg:col-span-2 p-4 md:p-8 rounded-2xl md:rounded-[40px] bg-white/60 dark:bg-chat-surface/40 border border-black/10 dark:border-chat-border flex flex-col justify-between shadow-[0_8px_30px_rgba(0,0,0,0.02)] hover:border-chat-accent/30 hover:shadow-xl transition-all duration-300">
                  <div>
                     <div className="flex items-center justify-between mb-4">
                        <h3 className="text-xl font-bold">Active Connections</h3>
@@ -342,8 +427,19 @@ export default function Home() {
                           </Link>
                        </div>
                     ) : friendsList.filter(f => onlineUsers.includes(f._id)).length === 0 ? (
-                       <div className="w-full text-center py-6">
-                          <p className="text-chat-muted text-xs font-semibold">None of your friends are currently active.</p>
+                       <div className="w-full text-center py-6 flex flex-col items-center justify-center gap-2">
+                          <div className="h-10 w-10 rounded-full bg-chat-accent/15 border border-chat-accent/25 flex items-center justify-center text-chat-accent animate-bounce">
+                             <Users className="w-5 h-5" />
+                          </div>
+                          <div>
+                             <p className="text-chat-muted text-xs font-semibold">None of your friends are active right now.</p>
+                          </div>
+                          <button 
+                             onClick={handleCopyInviteLink}
+                             className="mt-1 px-4 py-1.5 text-[10px] font-black rounded-lg bg-chat-accent text-white hover:bg-chat-accent/90 transition-all cursor-pointer shadow-md shadow-chat-accent/20"
+                          >
+                             Invite Friends
+                          </button>
                        </div>
                     ) : (
                        friendsList.filter(f => onlineUsers.includes(f._id)).map((friend) => (
@@ -374,7 +470,7 @@ export default function Home() {
               </div>
 
               {/* Galleria Showcase Preview */}
-              <div className="lg:col-span-2 p-8 rounded-[40px] bg-white/60 dark:bg-chat-surface/40 border border-black/10 dark:border-chat-border flex flex-col justify-between shadow-[0_8px_30px_rgba(0,0,0,0.02)]">
+              <div className="lg:col-span-2 p-6 md:p-8 rounded-[28px] md:rounded-[40px] bg-white/60 dark:bg-chat-surface/40 border border-black/10 dark:border-chat-border flex flex-col justify-between shadow-[0_8px_30px_rgba(0,0,0,0.02)] hover:border-chat-accent/30 hover:shadow-xl transition-all duration-300">
                  <div>
                     <div className="flex items-center justify-between mb-4">
                        <h3 className="text-xl font-bold">Your Galleria Showcase</h3>
@@ -409,87 +505,163 @@ export default function Home() {
               </div>
 
               {/* My Communities List Widget */}
-              {roomsList.length > 0 && (
-                <div className="lg:col-span-4 p-8 rounded-[40px] bg-white/60 dark:bg-chat-surface/40 border border-black/10 dark:border-chat-border space-y-6 shadow-[0_8px_30px_rgba(0,0,0,0.02)] animate-fadeIn">
-                   <div className="flex items-center justify-between">
-                      <h3 className="text-xl font-bold">My Communities</h3>
-                      <Link href="/groups" className="text-chat-accent text-xs font-black hover:underline flex items-center gap-1.5 group">
-                         Manage Groups <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
-                      </Link>
-                   </div>
-                   
-                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                      {roomsList.slice(0, 4).map((room) => (
-                         <div 
-                            key={room._id} 
-                            onClick={() => router.push(`/chat?room=${room._id}`)}
-                            className="p-5 rounded-3xl border border-black/5 dark:border-white/5 bg-white dark:bg-black/20 hover:border-chat-accent/40 hover:shadow-xl cursor-pointer transition-all group flex flex-col justify-between"
-                         >
-                            <div className="flex items-start justify-between">
-                               <div className="relative">
-                                  <div className="h-12 w-12 rounded-2xl overflow-hidden bg-chat-raised shadow-inner">
-                                     {room.image ? (
-                                       <img src={resolveMediaUrl(room.image)} className="h-full w-full object-cover" alt="" />
-                                     ) : (
-                                       <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-purple-500 to-indigo-600 text-white font-black text-sm uppercase">
-                                          {room.name[0]}
-                                       </div>
-                                     )}
+              <div className="lg:col-span-4 p-4 md:p-8 rounded-2xl md:rounded-[40px] bg-white/60 dark:bg-chat-surface/40 border border-black/10 dark:border-chat-border space-y-3 md:space-y-6 shadow-[0_8px_30px_rgba(0,0,0,0.02)] hover:border-chat-accent/20 hover:shadow-xl transition-all duration-300">
+                 <div className="flex items-center justify-between">
+                    <h3 className="text-lg md:text-xl font-bold">My Communities</h3>
+                    <Link href="/groups" className="text-chat-accent text-[10px] md:text-xs font-black hover:underline flex items-center gap-1.5 group">
+                       Manage Groups <ArrowRight className="w-3 h-3 md:w-3.5 md:h-3.5 transition-transform group-hover:translate-x-0.5" />
+                    </Link>
+                 </div>
+                 
+                 <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
+                    {roomsList.slice(0, 3).map((room) => (
+                       <div 
+                          key={room._id} 
+                          onClick={() => router.push(`/chat?room=${room._id}`)}
+                          className="p-3.5 md:p-5 rounded-2xl md:rounded-3xl border border-black/5 dark:border-white/5 bg-white dark:bg-black/20 hover:border-chat-accent/40 hover:-translate-y-1 hover:shadow-xl cursor-pointer transition-all duration-300 group flex flex-col justify-between"
+                       >
+                          <div className="flex items-start justify-between">
+                             <div className="relative">
+                                <div className="h-12 w-12 rounded-2xl overflow-hidden bg-chat-raised shadow-inner">
+                                   {room.image ? (
+                                     <img src={resolveMediaUrl(room.image)} className="h-full w-full object-cover" alt="" />
+                                   ) : (
+                                     <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-purple-500 to-indigo-600 text-white font-black text-sm uppercase">
+                                        {room.name[0]}
+                                     </div>
+                                   )}
+                                </div>
+                             </div>
+                             
+                             {/* Stacked Circle Avatars */}
+                             <div className="flex items-center -space-x-2 overflow-hidden pl-2">
+                                {room.participants?.slice(0, 3).map((p: any, idx: number) => (
+                                  <div
+                                    key={idx}
+                                    className="inline-block h-6 w-6 rounded-full ring-2 ring-white dark:ring-chat-surface overflow-hidden bg-chat-raised shrink-0"
+                                    title={p.name}
+                                  >
+                                    {p.profilePhoto ? (
+                                      <img
+                                        src={resolveMediaUrl(p.profilePhoto)}
+                                        className="h-full w-full object-cover"
+                                        alt=""
+                                      />
+                                    ) : (
+                                      <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-purple-500 to-indigo-600 text-white font-black text-[8px] uppercase">
+                                        {(p.name || "U")[0]}
+                                      </div>
+                                    )}
                                   </div>
-                               </div>
-                            </div>
-                            <div className="mt-4">
-                               <span className="block font-bold text-sm text-chat-text group-hover:text-chat-accent transition-colors truncate">{room.name}</span>
-                               <span className="block text-[9px] text-chat-muted font-bold uppercase tracking-wider mt-1">{room.participants?.length || 0} Members</span>
-                            </div>
-                         </div>
-                      ))}
-                   </div>
-                </div>
-              )}
+                                ))}
+                                {room.participants?.length > 3 && (
+                                  <div className="flex items-center justify-center h-6 w-6 rounded-full bg-chat-raised ring-2 ring-white dark:ring-chat-surface text-[8px] font-bold text-chat-muted shrink-0">
+                                    +{room.participants.length - 3}
+                                  </div>
+                                )}
+                             </div>
+                          </div>
+                          
+                          <div className="mt-4">
+                             <span className="block font-bold text-sm text-chat-text group-hover:text-chat-accent transition-colors truncate">{room.name}</span>
+                             <span className="block text-[9px] text-chat-muted font-bold uppercase tracking-wider mt-1">{room.participants?.length || 0} Members</span>
+                          </div>
+                       </div>
+                    ))}
+                    
+                    {/* Dashed Create Community Placeholder */}
+                    <Link
+                      href="/groups"
+                      className="p-3.5 md:p-5 rounded-2xl md:rounded-3xl border border-dashed border-chat-border hover:border-chat-accent/50 bg-chat-surface/20 dark:bg-black/5 flex flex-col items-center justify-center text-center cursor-pointer transition-all hover:scale-[1.02] hover:-translate-y-1 hover:shadow-lg min-h-[140px] group duration-300"
+                    >
+                      <div className="p-2.5 rounded-full bg-chat-accent/10 text-chat-accent group-hover:scale-115 transition-transform mb-2">
+                        <Plus className="w-4 h-4" />
+                      </div>
+                      <span className="block font-extrabold text-xs text-chat-text">Create Community</span>
+                      <span className="block text-[9px] text-chat-muted font-bold mt-1">Start a new group</span>
+                    </Link>
+                 </div>
+              </div>
 
-              {/* Global Activity Hub */}
-              <div className="lg:col-span-4 p-8 rounded-[40px] bg-white/60 dark:bg-chat-surface/40 border border-black/10 dark:border-chat-border grid grid-cols-1 md:grid-cols-2 gap-8 items-center shadow-[0_8px_30px_rgba(0,0,0,0.02)] animate-fadeIn">
+              {/* Recent Activity Feed */}
+              <div className="lg:col-span-2 p-6 md:p-8 rounded-[28px] md:rounded-[40px] bg-white/60 dark:bg-chat-surface/40 border border-black/10 dark:border-chat-border flex flex-col justify-between shadow-[0_8px_30px_rgba(0,0,0,0.02)] hover:border-chat-accent/30 hover:shadow-xl transition-all duration-300 group">
+                 <div>
+                    <div className="flex items-center justify-between mb-4">
+                       <h3 className="text-xl font-bold">Recent Activity</h3>
+                       <span className="text-[10px] font-bold text-blue-400 bg-blue-500/10 px-2.5 py-1 rounded-full uppercase tracking-wider">
+                         Updates
+                       </span>
+                    </div>
+                    <p className="text-chat-muted text-xs font-medium mb-6">A timeline of recent events in your network.</p>
+                 </div>
+                 
+                 <div className="space-y-4">
+                     {activityFeed.length === 0 ? (
+                        <div className="w-full text-center py-6">
+                           <p className="text-chat-muted text-xs font-semibold">No recent activity found.</p>
+                        </div>
+                     ) : (
+                        activityFeed.map((act) => (
+                           <div key={act.id} className="flex items-center justify-between border-b border-chat-border/30 pb-3 last:border-0 last:pb-0">
+                              <div className="flex items-center gap-3.5">
+                                 <div className={cn("p-2 rounded-xl shrink-0 flex items-center justify-center", act.iconBg)}>
+                                    {act.icon}
+                                 </div>
+                                 <span className="text-xs font-semibold text-chat-text leading-tight">
+                                    {act.text}
+                                 </span>
+                              </div>
+                              <span className="text-[10px] text-chat-muted font-black whitespace-nowrap pl-2">
+                                 {act.time}
+                              </span>
+                           </div>
+                        ))
+                     )}
+                  </div>
+              </div>
+
+              {/* Chatiq Network Activity (Pulse metrics + Stats) */}
+              <div className="lg:col-span-2 p-6 md:p-8 rounded-[28px] md:rounded-[40px] bg-white/60 dark:bg-chat-surface/40 border border-black/10 dark:border-chat-border flex flex-col justify-between shadow-[0_8px_30px_rgba(0,0,0,0.02)] hover:border-chat-accent/30 hover:shadow-xl transition-all duration-300">
                  <div className="space-y-3">
                     <span className="inline-block px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider text-teal-400 bg-teal-500/10 border border-teal-500/20">
                        Real-time Pulse
                     </span>
-                    <h3 className="text-2xl font-bold">Nexora Network Activity</h3>
+                    <h3 className="text-xl font-bold">Chatiq Network Activity</h3>
                     <p className="text-chat-muted text-xs leading-relaxed font-medium">
                        There are currently <span className="text-chat-text font-black">{onlineUsers.length}</span> active connections on the server nodes.
                     </p>
                  </div>
                  
-                 <div className="grid grid-cols-2 gap-4">
-                    <div className="p-4 rounded-3xl bg-chat-bg border border-chat-border text-center">
-                       <span className="block text-2xl font-black text-chat-accent">{friendsList.length}</span>
-                       <span className="block text-[10px] text-chat-muted font-bold uppercase tracking-wider mt-1">My Connections</span>
+                 <div className="grid grid-cols-2 gap-4 mt-6">
+                    <div className="p-4 rounded-2xl bg-chat-bg/60 dark:bg-black/10 border border-chat-border text-center shadow-inner">
+                       <span className="block text-2xl font-black bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">{friendsList.length}</span>
+                       <span className="block text-[10px] text-chat-muted font-black uppercase tracking-wider mt-1">My Connections</span>
                     </div>
-                    <div className="p-4 rounded-3xl bg-chat-bg border border-chat-border text-center">
-                       <span className="block text-2xl font-black text-teal-400">{roomsList.length}</span>
-                       <span className="block text-[10px] text-chat-muted font-bold uppercase tracking-wider mt-1">My Communities</span>
+                    <div className="p-4 rounded-2xl bg-chat-bg/60 dark:bg-black/10 border border-chat-border text-center shadow-inner">
+                       <span className="block text-2xl font-black bg-gradient-to-r from-teal-400 to-blue-400 bg-clip-text text-transparent">{roomsList.length}</span>
+                       <span className="block text-[10px] text-chat-muted font-black uppercase tracking-wider mt-1">My Communities</span>
                     </div>
                  </div>
               </div>
            </div>
         </main>
 
-        <footer className="border-t border-chat-surface bg-chat-bg/50 py-20 px-6">
-           <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12">
-              <div className="space-y-6">
+        <footer className="border-t border-chat-surface bg-chat-bg/50 py-10 md:py-20 px-4 md:px-6">
+           <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8 md:gap-12">
+              <div className="space-y-4 md:space-y-6">
                     <Logo size="md" showText />
-                    <p className="text-chat-muted text-sm leading-relaxed">
+                    <p className="text-chat-muted text-xs md:text-sm leading-relaxed">
                        The next generation of social networking. Real-time, secure, and built for discovery.
                     </p>
-                    <div className="flex gap-4">
-                       <button className="h-10 w-10 rounded-xl bg-chat-surface border border-chat-border flex items-center justify-center text-chat-muted hover:text-blue-400 transition-all">
-                          <Camera className="h-5 w-5" />
+                    <div className="flex gap-3 md:gap-4">
+                       <button className="h-8 w-8 md:h-10 md:w-10 rounded-lg md:rounded-xl bg-chat-surface border border-chat-border flex items-center justify-center text-chat-muted hover:text-blue-400 transition-all">
+                          <Camera className="h-4.5 w-4.5 md:h-5 md:w-5" />
                        </button>
-                       <button className="h-10 w-10 rounded-xl bg-chat-surface border border-chat-border flex items-center justify-center text-chat-muted hover:text-blue-400 transition-all">
-                          <Send className="h-5 w-5" />
+                       <button className="h-8 w-8 md:h-10 md:w-10 rounded-lg md:rounded-xl bg-chat-surface border border-chat-border flex items-center justify-center text-chat-muted hover:text-blue-400 transition-all">
+                          <Send className="h-4.5 w-4.5 md:h-5 md:w-5" />
                        </button>
-                       <button className="h-10 w-10 rounded-xl bg-chat-surface border border-chat-border flex items-center justify-center text-chat-muted hover:text-blue-400 transition-all">
-                          <Briefcase className="h-5 w-5" />
+                       <button className="h-8 w-8 md:h-10 md:w-10 rounded-lg md:rounded-xl bg-chat-surface border border-chat-border flex items-center justify-center text-chat-muted hover:text-blue-400 transition-all">
+                          <Briefcase className="h-4.5 w-4.5 md:h-5 md:w-5" />
                        </button>
                     </div>
               </div>
@@ -517,7 +689,7 @@ export default function Home() {
               <div className="space-y-6">
                  <h4 className="text-sm font-black uppercase tracking-widest text-chat-text">Contact</h4>
                  <ul className="space-y-3 text-chat-muted text-sm font-medium">
-                    <li className="flex items-center gap-3"><Mail className="h-4 w-4" /> support@nexora.chat</li>
+                    <li className="flex items-center gap-3"><Mail className="h-4 w-4" /> support@chatiq.app</li>
                     <li className="flex items-center gap-3"><MapPin className="h-4 w-4" /> Silicon Valley, CA</li>
                     <li className="flex items-center gap-3 font-bold text-blue-400 underline cursor-pointer">Live Status: Operational</li>
                  </ul>
@@ -525,7 +697,7 @@ export default function Home() {
            </div>
            
            <div className="max-w-7xl mx-auto mt-20 pt-8 border-t border-chat-surface flex flex-col md:flex-row justify-between items-center gap-6">
-              <p className="text-chat-muted text-xs font-bold uppercase tracking-widest">© {new Date().getFullYear()} NEXORA CHAT. ALL RIGHTS RESERVED.</p>
+              <p className="text-chat-muted text-xs font-bold uppercase tracking-widest">© {new Date().getFullYear()} CHATIQ. ALL RIGHTS RESERVED.</p>
               <div className="flex gap-8 text-chat-muted text-xs font-bold">
                  <span>SECURED BY JWT</span>
                  <span>PULSE DISCOVERY</span>
@@ -555,10 +727,10 @@ export default function Home() {
       <nav className={`fixed inset-x-0 top-0 z-50 transition-all duration-500 px-4 md:px-8 py-6 ${scrolled ? 'pt-4' : 'pt-6'}`}>
         <div className={`mx-auto max-w-7xl rounded-3xl border border-black/10 dark:border-white/5 bg-white/95 dark:bg-black/25 backdrop-blur-2xl px-6 py-3.5 flex items-center justify-between transition-all duration-300 shadow-[0_8px_32px_rgba(0,0,0,0.04)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.12)] ${scrolled ? 'shadow-[0_12px_40px_rgba(0,0,0,0.08)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.3)] bg-white dark:bg-black/40 border-black/15 dark:border-white/10' : ''}`}>
           <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-chat-accent rounded-xl shadow-lg shadow-chat-accent/25">
+            <div className="p-1">
               <Logo size="sm" />
             </div>
-            <span className="text-lg font-black tracking-tight uppercase text-chat-text">Nexora</span>
+            <span className="text-lg font-black tracking-tight uppercase text-chat-text">Chatiq</span>
           </div>
           
           <div className="flex items-center gap-3 sm:gap-4">
@@ -642,7 +814,7 @@ export default function Home() {
                 <span className="w-3.5 h-3.5 rounded-full bg-[#27c93f] border border-[#1a9c2b] cursor-pointer flex items-center justify-center text-[7px] text-[#024d00] font-bold group" />
               </div>
               <div className="text-[11px] font-bold tracking-tight text-chat-muted flex items-center gap-1.5 bg-slate-50 dark:bg-white/5 px-4 py-1 rounded-full border border-black/10 dark:border-white/10">
-                <Lock className="w-3 h-3 text-chat-accent" /> nexora-chat-app-mock.local
+                 <Lock className="w-3 h-3 text-chat-accent" /> chatiq-app-mock.local
               </div>
               <div className="w-16" />
             </div>
@@ -654,7 +826,7 @@ export default function Home() {
               <div className="w-16 md:w-64 border-r border-black/10 dark:border-white/5 flex flex-col min-h-0 bg-slate-50/80 dark:bg-black/10 shrink-0">
                 <div className="p-2 md:p-4 space-y-4 shrink-0">
                   <div className="flex items-center justify-between">
-                    <span className="text-[12px] font-black uppercase tracking-widest text-chat-text hidden md:block">Nexora Conversations</span>
+                     <span className="text-[12px] font-black uppercase tracking-widest text-chat-text hidden md:block">Chatiq Conversations</span>
                     <span className="w-2.5 h-2.5 rounded-full bg-chat-success shadow-[0_0_8px_currentColor] hidden md:block" />
                   </div>
                   
@@ -778,12 +950,12 @@ export default function Home() {
                         {activeMockChat.status === "online" ? (
                           <>
                             <span className="w-1.5 h-1.5 rounded-full bg-chat-success" />
-                            <span>Active now • {activeMockChat.bio}</span>
+                            <span>Active now<span className="hidden md:inline"> • {activeMockChat.bio}</span></span>
                           </>
                         ) : (
                           <>
                             <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                            <span>Away • {activeMockChat.bio}</span>
+                            <span>Away<span className="hidden md:inline"> • {activeMockChat.bio}</span></span>
                           </>
                         )}
                       </p>
@@ -1182,8 +1354,8 @@ export default function Home() {
           <div className="space-y-4">
             {[
               {
-                q: "Is Nexora completely real-time?",
-                a: "Absolutely! Nexora is powered by custom Socket.io connections for instant, millisecond-level message sync and real-time state broadcasts."
+                q: "Is Chatiq completely real-time?",
+                a: "Absolutely! Chatiq is powered by custom Socket.io connections for instant, millisecond-level message sync and real-time state broadcasts."
               },
               {
                 q: "How does the Apple-style glassmorphism work?",
@@ -1191,7 +1363,7 @@ export default function Home() {
               },
               {
                 q: "Can I make voice and video calls on the platform?",
-                a: "Yes. Nexora supports low-latency WebRTC calls with private STUN/TURN relays to ensure high-definition audio and video sync across any device."
+                a: "Yes. Chatiq supports low-latency WebRTC calls with private STUN/TURN relays to ensure high-definition audio and video sync across any device."
               },
               {
                 q: "How secure is my profile and data?",
@@ -1240,7 +1412,7 @@ export default function Home() {
             <Logo size="sm" showText />
             <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-chat-muted border-l border-white/20 pl-3">v2.0 Premium</span>
           </div>
-          <p className="font-bold uppercase tracking-widest text-[9px]">© {new Date().getFullYear()} Nexora Chat. All rights reserved.</p>
+          <p className="font-bold uppercase tracking-widest text-[9px]">© {new Date().getFullYear()} Chatiq. All rights reserved.</p>
           <div className="flex gap-6 font-black uppercase text-[10px]">
              <Camera className="h-4 w-4 hover:text-chat-text cursor-pointer transition-colors" />
              <Send className="h-4 w-4 hover:text-chat-text cursor-pointer transition-colors" />

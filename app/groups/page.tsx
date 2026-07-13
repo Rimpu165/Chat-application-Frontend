@@ -18,18 +18,18 @@ import ThemeToggle from "@/components/ThemeToggle";
 
 // Premium Skeleton Component
 const GroupSkeleton = () => (
-  <div className="relative overflow-hidden rounded-[2.5rem] border border-chat-border bg-chat-surface p-6 shadow-xl">
+  <div className="relative overflow-hidden rounded-[1.5rem] md:rounded-[2.5rem] border border-chat-border bg-chat-surface p-4 md:p-6 shadow-xl">
     <div className="flex gap-4">
-      <div className="h-20 w-20 rounded-3xl bg-chat-bg animate-pulse" />
+      <div className="h-16 w-16 md:h-20 md:w-20 rounded-2xl md:rounded-3xl bg-chat-bg animate-pulse" />
       <div className="flex-1 space-y-3">
         <div className="h-6 w-1/2 bg-chat-bg rounded-lg animate-pulse" />
         <div className="h-4 w-3/4 bg-chat-bg rounded-lg animate-pulse" />
         <div className="flex gap-2">
-           {[1,2,3].map(i => <div key={i} className="h-8 w-8 rounded-xl bg-chat-bg animate-pulse" />)}
+           {[1,2,3].map(i => <div key={i} className="h-7 w-7 md:h-8 md:w-8 rounded-lg md:rounded-xl bg-chat-bg animate-pulse" />)}
         </div>
       </div>
     </div>
-    <div className="mt-6 h-12 w-full bg-chat-bg rounded-2xl animate-pulse" />
+    <div className="mt-6 h-10 md:h-12 w-full bg-chat-bg rounded-xl md:rounded-2xl animate-pulse" />
     <div className="absolute inset-0 animate-shimmer pointer-events-none" />
   </div>
 );
@@ -94,7 +94,7 @@ export default function GroupsPage() {
       setFriends(friendsRes.data);
       setRooms(roomsRes.data.filter((r: any) => r.isGroup));
     } catch {
-      toast.error("Failed to load data", { className: "toast-nexora" });
+      toast.error("Failed to load data", { className: "toast-chatiq" });
     } finally {
       setLoadingData(false);
     }
@@ -179,7 +179,7 @@ export default function GroupsPage() {
     navigator.clipboard.writeText(url);
     toast.success("Invite link copied to clipboard", {
       icon: "🔗",
-      className: "toast-nexora"
+      className: "toast-chatiq"
     });
   };
 
@@ -240,7 +240,7 @@ export default function GroupsPage() {
   const { onlineUsers } = useSocket();
 
   return (
-    <div className="relative min-h-screen bg-chat-bg text-chat-text overflow-x-hidden pt-24">
+    <div className="relative min-h-screen bg-chat-bg text-chat-text overflow-x-hidden pt-24 pb-24 md:pb-12">
       {/* Animated Aura Background */}
       <div className="absolute inset-0 animate-aura pointer-events-none z-0" />
       
@@ -451,38 +451,38 @@ export default function GroupsPage() {
                     key={room._id} 
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="group relative overflow-hidden rounded-[2.5rem] border border-chat-border bg-chat-surface p-6 shadow-xl transition-all hover:border-chat-accent/30 hover:shadow-chat-accent/5 hover:bg-chat-raised/50"
+                    className="group relative overflow-hidden rounded-[1.5rem] md:rounded-[2.5rem] border border-chat-border bg-chat-surface p-4 md:p-6 shadow-xl transition-all hover:border-chat-accent/30 hover:shadow-chat-accent/5 hover:bg-chat-raised/50"
                   >
-                    <div className="flex gap-4">
+                    <div className="flex gap-3 md:gap-4">
                       {/* Avatar */}
-                      <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-3xl border border-chat-border bg-chat-bg shadow-lg">
+                      <div className="relative h-16 w-16 md:h-20 md:w-20 shrink-0 overflow-hidden rounded-2xl md:rounded-3xl border border-chat-border bg-chat-bg shadow-lg">
                         {room.groupImage ? (
                           <img src={resolveMediaUrl(room.groupImage)} alt="" className="h-full w-full object-cover" />
                         ) : (
-                          <div className="flex h-full items-center justify-center bg-gradient-to-br from-chat-accent/20 to-chat-surface text-3xl font-black text-chat-accent">
+                          <div className="flex h-full items-center justify-center bg-gradient-to-br from-chat-accent/20 to-chat-surface text-2xl md:text-3xl font-black text-chat-accent">
                             {room.name[0]}
                           </div>
                         )}
                         {isAdmin && (
                           <div className="absolute bottom-0 inset-x-0 h-1/3 bg-chat-accent/80 flex items-center justify-center backdrop-blur-sm">
-                             <ShieldCheck className="h-4 w-4 text-chat-bg" />
+                             <ShieldCheck className="h-3.5 w-3.5 md:h-4 md:w-4 text-chat-bg" />
                           </div>
                         )}
                       </div>
 
-                      <div className="flex-1 space-y-2 overflow-hidden">
+                      <div className="flex-1 space-y-1.5 md:space-y-2 overflow-hidden">
                         <div className="flex items-start justify-between">
                           <div className="overflow-hidden">
-                            <h3 className="truncate text-xl font-black">{room.name}</h3>
-                            <p className="truncate text-xs text-chat-muted h-4">{room.description || "No description set"}</p>
+                            <h3 className="truncate text-lg md:text-xl font-black">{room.name}</h3>
+                            <p className="truncate text-[10px] md:text-xs text-chat-muted h-4">{room.description || "No description set"}</p>
                           </div>
                           <div className="flex gap-1 shrink-0">
                              <button 
                                onClick={() => copyInvite(room._id)}
                                title="Copy Invite Link"
-                               className="p-1.5 rounded-lg hover:bg-chat-accent/10 text-chat-muted hover:text-chat-accent transition-colors"
+                               className="p-1 rounded-lg hover:bg-chat-accent/10 text-chat-muted hover:text-chat-accent transition-colors"
                              >
-                                <Plus className="h-4 w-4 rotate-45" />
+                                <Plus className="h-3.5 w-3.5 md:h-4 md:w-4 rotate-45" />
                              </button>
                              {isAdmin && (
                               <button 
@@ -491,43 +491,43 @@ export default function GroupsPage() {
                                   setEditName(room.name);
                                   setEditDescription(room.description || "");
                                 }}
-                                className="p-1.5 rounded-lg hover:bg-chat-accent/10 text-chat-muted hover:text-chat-accent transition-colors"
+                                className="p-1 rounded-lg hover:bg-chat-accent/10 text-chat-muted hover:text-chat-accent transition-colors"
                               >
-                                <Settings2 className="h-4 w-4" />
+                                <Settings2 className="h-3.5 w-3.5 md:h-4 md:w-4" />
                               </button>
                              )}
                           </div>
                         </div>
-                        <div className="flex items-center gap-3 text-[10px] font-bold uppercase tracking-wider text-chat-muted">
+                        <div className="flex items-center gap-3 text-[9px] md:text-[10px] font-bold uppercase tracking-wider text-chat-muted">
                            <div className="flex items-center gap-1">
-                              <Users className="h-3 w-3" />
+                              <Users className="h-2.5 w-2.5 md:h-3 md:w-3" />
                               <span>{room.participants.length}</span>
                            </div>
                            <div className="flex items-center gap-1 text-chat-success">
-                              <div className="h-1.5 w-1.5 rounded-full bg-chat-success shadow-[0_0_5px_currentColor]" />
+                              <div className="h-1 w-1 md:h-1.5 md:w-1.5 rounded-full bg-chat-success shadow-[0_0_5px_currentColor]" />
                               <span>{onlineCount} Online</span>
                            </div>
                         </div>
-                        <div className="flex flex-wrap gap-1.5 pt-2">
+                        <div className="flex flex-wrap gap-1 md:gap-1.5 pt-1.5">
                            {room.participants.slice(0, 6).map((p: any) => {
                              const isOnline = onlineUsers.includes(p._id);
                              return (
                                <div key={p._id} className="relative group/p">
-                                  <div className={`h-8 w-8 overflow-hidden rounded-xl bg-chat-bg border shrink-0 transition-all ${isOnline ? 'border-chat-success' : 'border-chat-border'}`} title={p.name}>
+                                  <div className={`h-7 w-7 md:h-8 md:w-8 overflow-hidden rounded-lg md:rounded-xl bg-chat-bg border shrink-0 transition-all ${isOnline ? 'border-chat-success' : 'border-chat-border'}`} title={p.name}>
                                     {p.profilePhoto ? (
                                         <img src={resolveMediaUrl(p.profilePhoto)} className="h-full w-full object-cover" />
                                     ) : (
-                                      <div className="flex h-full items-center justify-center text-[10px] font-bold uppercase">{p.name[0]}</div>
+                                      <div className="flex h-full items-center justify-center text-[9px] md:text-[10px] font-bold uppercase">{p.name[0]}</div>
                                     )}
                                   </div>
                                   {isOnline && (
-                                    <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-chat-surface bg-chat-success" />
+                                    <div className="absolute -bottom-0.5 -right-0.5 h-2 w-2 md:h-2.5 md:w-2.5 rounded-full border border-chat-surface bg-chat-success" />
                                   )}
                                </div>
                              );
                            })}
                            {room.participants.length > 6 && (
-                             <div className="flex h-8 items-center rounded-xl bg-chat-accent/10 px-2 text-[10px] font-bold text-chat-accent border border-chat-accent/20">
+                             <div className="flex h-7 md:h-8 items-center rounded-lg md:rounded-xl bg-chat-accent/10 px-1.5 md:px-2 text-[9px] md:text-[10px] font-bold text-chat-accent border border-chat-accent/20">
                                +{room.participants.length - 6}
                              </div>
                            )}
@@ -535,29 +535,29 @@ export default function GroupsPage() {
                       </div>
                     </div>
 
-                    <div className="mt-6 flex items-center justify-between gap-4 border-t border-chat-border/40 pt-5">
+                    <div className="mt-4 md:mt-6 flex items-center justify-between gap-3 md:gap-4 border-t border-chat-border/40 pt-4 md:pt-5">
                        <button
                          onClick={() => router.push(`/chat?room=${room._id}`)}
-                         className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-chat-raised py-3.5 text-sm font-bold transition-all hover:bg-chat-accent hover:text-chat-bg hover:translate-y-[-2px] active:translate-y-0"
+                         className="flex flex-1 items-center justify-center gap-2 rounded-xl md:rounded-2xl bg-chat-raised py-2.5 md:py-3.5 text-xs md:text-sm font-bold transition-all hover:bg-chat-accent hover:text-chat-bg hover:translate-y-[-2px] active:translate-y-0"
                        >
                          Enter Community
                        </button>
 
-                       <div className="flex gap-2">
+                       <div className="flex gap-1.5 md:gap-2">
                          <button
                            onClick={() => leaveRoom(room._id)}
                            title="Leave Group"
-                           className="flex h-12 w-12 items-center justify-center rounded-2xl border border-chat-border bg-chat-surface text-chat-muted transition-all hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-400"
+                           className="flex h-9 w-9 md:h-12 md:w-12 items-center justify-center rounded-xl md:rounded-2xl border border-chat-border bg-chat-surface text-chat-muted transition-all hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-400"
                          >
-                           <LogOut className="h-5 w-5" />
+                           <LogOut className="h-4.5 w-4.5 md:h-5 md:w-5" />
                          </button>
                          {isAdmin && (
                            <button
                              onClick={() => deleteRoom(room._id)}
                              title="Delete Group"
-                             className="flex h-12 w-12 items-center justify-center rounded-2xl border border-chat-border bg-chat-surface text-chat-muted transition-all hover:border-red-500/50 hover:bg-red-500/20 hover:text-red-400"
+                             className="flex h-9 w-9 md:h-12 md:w-12 items-center justify-center rounded-xl md:rounded-2xl border border-chat-border bg-chat-surface text-chat-muted transition-all hover:border-red-500/50 hover:bg-red-500/20 hover:text-red-400"
                            >
-                             <Trash2 className="h-5 w-5" />
+                             <Trash2 className="h-4.5 w-4.5 md:h-5 md:w-5" />
                            </button>
                          )}
                        </div>

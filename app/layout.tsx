@@ -5,6 +5,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import { SocketProvider } from "@/context/SocketContext";
 import { Toaster } from "react-hot-toast";
 import Navbar from "@/components/Navbar";
+import NotificationBanner from "@/components/NotificationBanner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,7 +18,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Nexora Chat - Real-Time Social Messaging",
+  title: "Chatiq - Real-Time Social Messaging",
   description: "Instagram-style social chat with calls, groups, and live messaging",
 };
 
@@ -34,11 +35,12 @@ export default function RootLayout({
         <AuthProvider>
           <SocketProvider>
             <Navbar />
+            <NotificationBanner />
             {children}
             <Toaster
               position="bottom-right"
               toastOptions={{
-                className: "toast-nexora",
+                className: "toast-chatiq",
                 duration: 3200,
               }}
             />

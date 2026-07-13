@@ -24,6 +24,7 @@ import {
 import API from "@/lib/api";
 import { resolveMediaUrl } from "@/lib/utils";
 import toast from "react-hot-toast";
+import { useRouter } from "next/navigation";
 
 interface UserProfileModalProps {
   userId: string | null;
@@ -33,6 +34,7 @@ interface UserProfileModalProps {
 }
 
 export default function UserProfileModal({ userId, onClose, onActionSuccess, isOnline }: UserProfileModalProps) {
+  const router = useRouter();
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -136,7 +138,7 @@ export default function UserProfileModal({ userId, onClose, onActionSuccess, isO
                         {profile.isFriend && <ShieldCheck className="h-5 w-5 text-blue-500" />}
                       </div>
                       <p className="text-xs font-bold text-chat-muted uppercase tracking-widest">
-                        {profile.isPrivate ? 'Private Profile' : 'Nexora Citizen'}
+                        {profile.isPrivate ? 'Private Profile' : 'Chatiq Member'}
                       </p>
                     </div>
                  </div>
@@ -235,13 +237,66 @@ export default function UserProfileModal({ userId, onClose, onActionSuccess, isO
                       )}
 
                       <div className="flex gap-4 border-t border-chat-border pt-8">
-                         {profile.isFriend ? (
+                         {profile.isFriend || profile.friendshipStatus === "friends" ? (
                            <button 
-                             onClick={() => toast.success("Opening chat...")}
+                             onClick={async () => {
+                               try {
+                                 const res = await API.post("/rooms/direct", { receiverId: profile._id });
+                                 router.push(`/chat?room=${res.data._id}`);
+                                 onClose();
+                               } catch (err) {
+                                 toast.error("Failed to start chat");
+                               }
+                             }}
                              className="flex-1 h-14 bg-blue-600 rounded-2xl font-black uppercase tracking-tight flex items-center justify-center gap-2 hover:bg-blue-500 transition-all shadow-lg shadow-blue-500/20"
                            >
                              <MessageCircle className="h-5 w-5" /> Send Message
                            </button>
+                         ) : profile.friendshipStatus === "pending" ? (
+                           <div className="flex-1 flex gap-3">
+                             <button 
+                                onClick={async () => {
+                                  if (!profile.friendshipRequestId) return;
+                                  setActionLoading(true);
+                                  try {
+                                    await API.put(`/friends/accept/${profile.friendshipRequestId}`);
+                                    toast.success("Request accepted");
+                                    fetchProfile();
+                                    if (onActionSuccess) onActionSuccess();
+                                  } catch {
+                                    toast.error("Action failed");
+                                  } finally {
+                                    setActionLoading(false);
+                                  }
+                                }}
+                                disabled={actionLoading}
+                                className="flex-1 h-14 bg-emerald-600 text-white rounded-2xl font-black uppercase tracking-tight flex items-center justify-center gap-2 hover:bg-emerald-500 transition-all shadow-lg shadow-emerald-500/20"
+                             >
+                               {actionLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <ShieldCheck className="h-5 w-5" />}
+                               Accept Request
+                             </button>
+                             <button 
+                                onClick={async () => {
+                                  if (!profile.friendshipRequestId) return;
+                                  setActionLoading(true);
+                                  try {
+                                    await API.put(`/friends/reject/${profile.friendshipRequestId}`);
+                                    toast.success("Request rejected");
+                                    fetchProfile();
+                                    if (onActionSuccess) onActionSuccess();
+                                  } catch {
+                                    toast.error("Action failed");
+                                  } finally {
+                                    setActionLoading(false);
+                                  }
+                                }}
+                                disabled={actionLoading}
+                                className="flex-1 h-14 bg-rose-600 text-white rounded-2xl font-black uppercase tracking-tight flex items-center justify-center gap-2 hover:bg-rose-500 transition-all shadow-lg shadow-rose-500/20"
+                             >
+                               {actionLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <X className="h-5 w-5" />}
+                               Ignore
+                             </button>
+                           </div>
                          ) : (
                            <button 
                               onClick={handleFriendAction}

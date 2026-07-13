@@ -179,21 +179,21 @@ export default function RequestsPage() {
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, scale: 0.95 }}
                       transition={{ delay: i * 0.05 }}
-                      className="bg-chat-surface/40 border border-chat-border rounded-3xl p-4 flex items-center justify-between group hover:border-chat-muted transition-all"
+                      className="bg-chat-surface/40 border border-chat-border rounded-3xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 group hover:border-chat-muted transition-all"
                     >
-                       <div className="flex items-center gap-4">
-                          <div className="w-14 h-14 rounded-2xl bg-chat-raised border border-chat-border overflow-hidden flex items-center justify-center shadow-lg font-bold text-xl text-chat-muted">
+                       <div className="flex items-center gap-4 w-full sm:w-auto">
+                          <div className="w-14 h-14 rounded-2xl bg-chat-raised border border-chat-border overflow-hidden flex items-center justify-center shadow-lg font-bold text-xl text-chat-muted shrink-0">
                              {req.fromUser.profilePhoto ? (
                                <img src={resolveMediaUrl(req.fromUser.profilePhoto)} className="w-full h-full object-cover" alt={req.fromUser.name} />
                              ) : req.fromUser.name[0]}
                           </div>
-                          <div>
-                             <h3 className="font-bold text-chat-text uppercase tracking-tight">{req.fromUser.name}</h3>
+                          <div className="min-w-0 flex-1">
+                             <h3 className="font-bold text-chat-text uppercase tracking-tight truncate">{req.fromUser.name}</h3>
                              <p className="text-xs text-chat-muted font-medium tracking-wide">Sent a link request</p>
                           </div>
                        </div>
 
-                       <div className="flex items-center gap-2">
+                       <div className="flex items-center gap-2 w-full sm:w-auto justify-end shrink-0">
                           <button 
                              title="Reject request"
                              onClick={() => handleAction(req._id, "reject")}
@@ -220,23 +220,23 @@ export default function RequestsPage() {
                      animate={{ opacity: 1, x: 0 }}
                      exit={{ opacity: 0, scale: 0.95 }}
                      transition={{ delay: i * 0.05 }}
-                     className="bg-chat-surface/40 border border-chat-border rounded-3xl p-4 flex items-center justify-between group hover:border-chat-muted transition-all"
+                     className="bg-chat-surface/40 border border-chat-border rounded-3xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 group hover:border-chat-muted transition-all"
                    >
-                     <div className="flex items-center gap-4">
-                       <div className="w-14 h-14 rounded-2xl bg-chat-raised border border-chat-border overflow-hidden flex items-center justify-center shadow-lg font-bold text-xl text-chat-muted">
+                     <div className="flex items-center gap-4 w-full sm:w-auto">
+                       <div className="w-14 h-14 rounded-2xl bg-chat-raised border border-chat-border overflow-hidden flex items-center justify-center shadow-lg font-bold text-xl text-chat-muted shrink-0">
                          {req.toUser.profilePhoto ? (
                            <img src={resolveMediaUrl(req.toUser.profilePhoto)} className="w-full h-full object-cover" alt={req.toUser.name} />
                          ) : req.toUser.name[0]}
                        </div>
-                       <div>
-                         <h3 className="font-bold text-chat-text uppercase tracking-tight">{req.toUser.name}</h3>
+                       <div className="min-w-0 flex-1">
+                         <h3 className="font-bold text-chat-text uppercase tracking-tight truncate">{req.toUser.name}</h3>
                          <p className="text-xs text-chat-muted font-medium tracking-wide">Waiting for response</p>
                        </div>
                      </div>
 
                      <button
                        onClick={() => cancelSent(req.toUser._id)}
-                       className="px-5 h-11 rounded-2xl border border-chat-border text-chat-muted font-semibold flex items-center gap-2 hover:text-amber-500 hover:border-amber-500/40 transition-all"
+                       className="px-5 h-11 rounded-2xl border border-chat-border text-chat-muted font-semibold flex items-center gap-2 hover:text-amber-500 hover:border-amber-500/40 transition-all w-full sm:w-auto justify-center shrink-0"
                      >
                        <Undo2 className="w-4 h-4" /> Cancel
                      </button>

@@ -24,7 +24,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import UserProfileModal from "@/components/UserProfileModal";
+import dynamic from "next/dynamic";
+const UserProfileModal = dynamic(() => import("@/components/UserProfileModal"), { ssr: false });
 import { resolveMediaUrl } from "@/lib/utils";
 import Logo from "@/components/Logo";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -58,14 +59,14 @@ function AvatarFallback({ name, src }: { name: string; src?: string }) {
         <img 
             src={resolveMediaUrl(src)} 
             onError={() => setError(true)}
-            className="w-16 h-16 rounded-[22px] object-cover ring-4 ring-chat-bg shadow-lg"
+            className="w-12 h-12 md:w-16 md:h-16 rounded-[16px] md:rounded-[22px] object-cover ring-4 ring-chat-bg shadow-lg"
             alt={name}
         />
     );
   }
 
   return (
-    <div className="w-16 h-16 rounded-[22px] bg-chat-surface flex items-center justify-center font-bold text-2xl text-chat-muted ring-4 ring-chat-surface shadow-inner">
+    <div className="w-12 h-12 md:w-16 md:h-16 rounded-[16px] md:rounded-[22px] bg-chat-surface flex items-center justify-center font-bold text-lg md:text-2xl text-chat-muted ring-4 ring-chat-surface shadow-inner">
       {name[0]}
     </div>
   );
@@ -205,37 +206,37 @@ export default function UsersPage() {
   if (loading || !user) return null;
 
   return (
-    <div className="min-h-screen bg-chat-bg text-chat-text overflow-x-hidden relative pt-24">
+    <div className="min-h-screen bg-chat-bg text-chat-text overflow-x-hidden relative pt-24 pb-24 md:pb-12">
       <div className="absolute top-0 right-0 w-[50%] h-[30%] bg-blue-500/5 blur-[120px] rounded-full pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-[50%] h-[30%] bg-purple-500/5 blur-[120px] rounded-full pointer-events-none" />
 
       {/* Main Content */}
-      <main className="flex-1 p-6 md:p-10 relative z-10">
+      <main className="flex-1 p-4 md:p-10 relative z-10">
         <div className="max-w-screen-2xl mx-auto">
-          <header className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-12">
+          <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8 md:mb-12">
              <div className="space-y-1">
-                <h1 className="text-4xl md:text-5xl font-bold tracking-tighter">Directory</h1>
-                <p className="text-chat-muted">Discover and connect with the community of {users.length} users.</p>
+                <h1 className="text-3xl md:text-5xl font-bold tracking-tighter">Directory</h1>
+                <p className="text-xs md:text-sm text-chat-muted">Discover and connect with the community of {users.length} users.</p>
              </div>
              
              <div className="relative w-full md:w-96">
                 <div className="absolute inset-0 bg-chat-accent/5 blur-2xl pointer-events-none" />
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-chat-muted w-5 h-5" />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-chat-muted w-4 h-4 md:w-5 md:h-5" />
                 <input 
                   type="text" 
                   placeholder="Search by name or email..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-chat-surface/50 border border-chat-border rounded-3xl py-4 pl-14 pr-6 text-sm focus:outline-none focus:ring-2 focus:ring-chat-accent/50 transition-all backdrop-blur-3xl shadow-2xl"
+                  className="w-full bg-chat-surface/50 border border-chat-border rounded-2xl md:rounded-3xl py-3 md:py-4 pl-12 md:pl-14 pr-4 md:pr-6 text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-chat-accent/50 transition-all backdrop-blur-3xl shadow-2xl"
                 />
              </div>
           </header>
 
-          <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
             <AnimatePresence mode="popLayout">
                 {isLoading ? (
                     Array(6).fill(0).map((_, i) => (
-                        <div key={i} className="h-64 bg-chat-surface/50 rounded-[40px] border border-chat-border animate-pulse" />
+                        <div key={i} className="h-48 md:h-64 bg-chat-surface/50 rounded-[24px] md:rounded-[40px] border border-chat-border animate-pulse" />
                     ))
                 ) : users.map((u, i) => {
                     const isOnline = onlineUsers.includes(u._id);
@@ -246,85 +247,85 @@ export default function UsersPage() {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: i * 0.05 }}
                             onClick={() => setSelectedUserId(u._id)}
-                            className="bg-chat-surface/40 border border-chat-border rounded-[40px] p-6 hover:bg-chat-surface hover:border-chat-muted hover:shadow-2xl hover:shadow-chat-accent/5 transition-all group relative overflow-hidden flex flex-col cursor-pointer"
+                            className="bg-chat-surface/40 border border-chat-border rounded-[24px] md:rounded-[40px] p-3 md:p-6 hover:bg-chat-surface hover:border-chat-muted hover:shadow-2xl hover:shadow-chat-accent/5 transition-all group relative overflow-hidden flex flex-col cursor-pointer"
                         >
-                            <div className="flex justify-between items-start mb-6">
+                            <div className="flex justify-between items-start mb-4 md:mb-6">
                                 <div className="relative group/avatar">
                                     <div className="absolute inset-0 bg-gradient-to-tr from-blue-600 to-purple-600 blur-xl opacity-0 group-hover/avatar:opacity-30 transition-opacity" />
                                     <AvatarFallback name={u.name} src={u.profilePhoto} />
                                     {isOnline && (
-                                        <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-chat-success rounded-full border-4 border-chat-bg shadow-lg shadow-chat-success/20" />
+                                        <div className="absolute -bottom-0.5 -right-0.5 w-4.5 h-4.5 md:w-5 md:h-5 bg-chat-success rounded-full border-2 md:border-4 border-chat-bg shadow-lg shadow-chat-success/20" />
                                     )}
                                 </div>
 
                                 <div className="flex flex-col items-end gap-2">
                                     {u.friendshipStatus === "friends" ? (
-                                        <div className="px-3 py-1.5 bg-blue-500/10 text-blue-400 rounded-full text-[10px] font-bold uppercase tracking-widest border border-blue-500/20 flex items-center gap-1.5">
-                                            <ShieldCheck className="w-3 h-3" /> Friends
+                                        <div className="px-2 md:px-3 py-1 md:py-1.5 bg-blue-500/10 text-blue-400 rounded-full text-[8px] md:text-[10px] font-bold uppercase tracking-widest border border-blue-500/20 flex items-center gap-1 md:gap-1.5">
+                                            <ShieldCheck className="w-2.5 h-2.5 md:w-3 md:h-3" /> Friends
                                         </div>
                                     ) : u.friendshipStatus === "sent" ? (
-                                        <div className="px-3 py-1.5 bg-amber-500/10 text-amber-500 rounded-full text-[10px] font-bold uppercase tracking-widest border border-amber-500/20 flex items-center gap-1.5">
-                                            <Clock className="w-3 h-3" /> Pending
+                                        <div className="px-2 md:px-3 py-1 md:py-1.5 bg-amber-500/10 text-amber-500 rounded-full text-[8px] md:text-[10px] font-bold uppercase tracking-widest border border-amber-500/20 flex items-center gap-1 md:gap-1.5">
+                                            <Clock className="w-2.5 h-2.5 md:w-3 md:h-3" /> Pending
                                         </div>
                                     ) : isOnline && (
-                                        <div className="px-3 py-1.5 bg-chat-success/10 text-chat-success rounded-full text-[10px] font-bold uppercase tracking-widest border border-chat-success/20 flex items-center gap-1.5">
+                                        <div className="px-2 md:px-3 py-1 md:py-1.5 bg-chat-success/10 text-chat-success rounded-full text-[8px] md:text-[10px] font-bold uppercase tracking-widest border border-chat-success/20 flex items-center gap-1 md:gap-1.5">
                                             <span className="w-1.5 h-1.5 rounded-full bg-chat-success animate-pulse" /> Online
                                         </div>
                                     )}
                                 </div>
                             </div>
 
-                            <div className="mb-8 overflow-hidden">
-                                <h3 className="text-xl font-bold text-chat-text truncate group-hover:text-chat-accent transition-colors uppercase tracking-tight">{u.name}</h3>
-                                <p className="text-xs text-chat-muted font-medium">Community Member</p>
+                            <div className="mb-4 md:mb-8 overflow-hidden">
+                                <h3 className="text-sm md:text-xl font-bold text-chat-text truncate group-hover:text-chat-accent transition-colors uppercase tracking-tight">{u.name}</h3>
+                                <p className="text-[9px] md:text-xs text-chat-muted font-medium">Community Member</p>
                             </div>
 
-                            <div className="mt-auto grid grid-cols-5 gap-2">
+                            <div className="mt-auto grid grid-cols-5 gap-1.5 md:gap-2">
                                 {(u.friendshipStatus === "none" || u.friendshipStatus === "rejected" || !u.friendshipStatus) && (
                                     <button 
                                         onClick={() => sendRequest(u._id)}
-                                        className="col-span-4 bg-chat-accent text-white h-12 rounded-2xl font-bold flex items-center justify-center gap-2 hover:opacity-90 transition-all active:scale-95 shadow-xl shadow-chat-accent/10"
+                                        className="col-span-4 bg-chat-accent text-white h-9 md:h-12 rounded-xl md:rounded-2xl font-bold text-xs md:text-sm flex items-center justify-center gap-1.5 md:gap-2 hover:opacity-90 transition-all active:scale-95 shadow-xl shadow-chat-accent/10"
                                     >
-                                        <Plus className="w-4 h-4" /> Add Friend
+                                        <Plus className="w-3.5 h-3.5 md:w-4 md:h-4" /> Add Friend
                                     </button>
                                 )}
                                 {u.friendshipStatus === "sent" && (
                                   <button
                                     onClick={() => cancelSentRequest(u._id)}
                                     disabled={!sentByTarget.get(u._id)}
-                                    className="col-span-4 bg-chat-raised text-amber-500 h-12 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-chat-surface transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                                    className="col-span-4 bg-chat-raised text-amber-500 h-9 md:h-12 rounded-xl md:rounded-2xl font-bold text-xs md:text-sm flex items-center justify-center gap-1.5 md:gap-2 hover:bg-chat-surface transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                                   >
-                                    <Undo2 className="w-4 h-4" /> Cancel Pending
+                                    <Undo2 className="w-3.5 h-3.5 md:w-4 md:h-4" /> Cancel<span className="hidden md:inline"> Pending</span>
                                   </button>
                                 )}
                                 {u.friendshipStatus === "pending" && (
-                                    <div className="col-span-4 flex gap-2">
+                                    <div className="col-span-4 flex gap-1.5 md:gap-2">
                                         <button 
                                             onClick={() => acceptRequest(u._id)}
-                                            className="flex-1 bg-chat-accent text-white h-12 rounded-2xl font-bold flex items-center justify-center gap-2 hover:opacity-90 transition-all active:scale-95 shadow-lg shadow-chat-accent/20"
+                                            className="flex-1 bg-chat-accent text-white h-9 md:h-12 rounded-xl md:rounded-2xl font-bold text-xs md:text-sm flex items-center justify-center gap-1.5 md:gap-2 hover:opacity-90 transition-all active:scale-95 shadow-lg shadow-chat-accent/20"
                                         >
-                                            <Check className="w-4 h-4" /> Accept
+                                            <Check className="w-3.5 h-3.5 md:w-4 md:h-4" /> Accept
                                         </button>
                                         <button 
                                             title="Reject request"
                                             onClick={() => rejectRequest(u._id)}
-                                            className="w-12 h-12 rounded-2xl bg-chat-surface border border-chat-border flex items-center justify-center text-chat-muted hover:text-red-500 hover:border-red-500/20 transition-all"
+                                            className="w-9 h-9 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-chat-surface border border-chat-border flex items-center justify-center text-chat-muted hover:text-red-500 hover:border-red-500/20 transition-all"
                                         >
-                                            <X className="w-4 h-4" />
+                                            <X className="w-3.5 h-3.5 md:w-4 md:h-4" />
                                         </button>
                                     </div>
                                 )}
                                 {u.friendshipStatus === "friends" && (
                                     <button 
                                         onClick={() => startChat(u._id)}
-                                        className="col-span-4 bg-chat-surface border border-chat-border text-chat-text h-12 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-chat-raised transition-all active:scale-95"
+                                        className="col-span-4 bg-chat-surface border border-chat-border text-chat-text h-9 md:h-12 rounded-xl md:rounded-2xl font-bold text-xs md:text-sm flex items-center justify-center gap-1.5 md:gap-2 hover:bg-chat-raised transition-all active:scale-95"
                                     >
-                                        <MessageCircle className="w-4 h-4" /> Message
+                                        <MessageCircle className="w-3.5 h-3.5 md:w-4 md:h-4" /> Message
                                     </button>
                                 )}
                                 
-                                <button title="Notifications" className="col-span-1 h-12 rounded-2xl bg-chat-surface border border-chat-border flex items-center justify-center text-chat-muted hover:text-chat-text hover:bg-chat-raised transition-all">
-                                    <Bell className="w-4 h-4" />
+                                <button title="Notifications" className="col-span-1 h-9 md:h-12 rounded-xl md:rounded-2xl bg-chat-surface border border-chat-border flex items-center justify-center text-chat-muted hover:text-chat-text hover:bg-chat-raised transition-all">
+                                    <Bell className="w-3.5 h-3.5 md:w-4 md:h-4" />
                                 </button>
                             </div>
                         </motion.div>

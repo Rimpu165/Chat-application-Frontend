@@ -20,7 +20,13 @@ import {
   X,
   UserX,
   PhoneCall,
-  Globe
+  Globe,
+  Languages,
+  Search,
+  Pin,
+  CornerUpRight,
+  Clock,
+  Smile
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -30,6 +36,53 @@ import { motion, AnimatePresence } from "framer-motion";
 interface ChatWindowProps {
   room: any;
   onClose: () => void;
+}
+
+const LOCAL_GIF_POOL = [
+  { url: "https://media.giphy.com/media/3NtY188QaxDdC/giphy.gif", tags: ["happy", "dance", "celebrate", "party"] },
+  { url: "https://media.giphy.com/media/26n6Gx9wEIndtvJFU/giphy.gif", tags: ["lol", "laugh", "funny", "haha"] },
+  { url: "https://media.giphy.com/media/l0EwYc29XZnLR2pNu/giphy.gif", tags: ["love", "heart", "cute", "kiss"] },
+  { url: "https://media.giphy.com/media/9Y5BbDSkSTiY8/giphy.gif", tags: ["sad", "cry", "tears", "depressed"] },
+  { url: "https://media.giphy.com/media/26ufdipQqU2lhNA4g/giphy.gif", tags: ["mindblown", "wow", "shock", "omg"] },
+  { url: "https://media.giphy.com/media/11tI5GGi6C36Mw/giphy.gif", tags: ["angry", "mad", "rage", "hate"] },
+  { url: "https://media.giphy.com/media/14412MUKmbQquk/giphy.gif", tags: ["dance", "music", "groove"] },
+  { url: "https://media.giphy.com/media/3o72F8t9TDi2xVnxOE/giphy.gif", tags: ["shocked", "wow", "surprised"] },
+  { url: "https://media.giphy.com/media/NEvPzZxiqDYyI/giphy.gif", tags: ["yes", "nod", "agree", "correct"] },
+  { url: "https://media.giphy.com/media/13CoXDiaCcX2uI/giphy.gif", tags: ["shrug", "maybe", "whatever", "dunno"] },
+  { url: "https://media.giphy.com/media/H45uY4mAF27yPzBSpu/giphy.gif", tags: ["thumbsup", "good", "like", "ok"] },
+  { url: "https://media.giphy.com/media/l41YkxvU8c7jt7C1y/giphy.gif", tags: ["facepalm", "sigh", "disappoint"] },
+];
+
+const searchLocalGifs = (query: string) => {
+  if (!query) return LOCAL_GIF_POOL.map(g => g.url);
+  const terms = query.toLowerCase().split(" ");
+  return LOCAL_GIF_POOL.filter(g => 
+    g.tags.some(tag => terms.some(term => tag.includes(term)))
+  ).map(g => g.url);
+};
+
+function VanishTimer({ message }: { message: any }) {
+  const seenTime = message.seenAt ? new Date(message.seenAt).getTime() : new Date().getTime();
+  const expireTime = seenTime + message.vanishTime * 1000;
+  const [secondsLeft, setSecondsLeft] = useState(Math.max(0, Math.round((expireTime - Date.now()) / 1000)));
+
+  useEffect(() => {
+    if (secondsLeft <= 0) return;
+    const timer = setInterval(() => {
+      const left = Math.max(0, Math.round((expireTime - Date.now()) / 1000));
+      setSecondsLeft(left);
+      if (left <= 0) clearInterval(timer);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [expireTime, secondsLeft]);
+
+  if (secondsLeft <= 0) return null;
+
+  return (
+    <span className="ml-2 inline-flex items-center gap-1 rounded bg-red-500/25 px-1.5 py-0.5 text-[9px] font-bold text-red-200 animate-pulse">
+      ⏱️ {secondsLeft}s
+    </span>
+  );
 }
 
 export default function ChatWindow({ room, onClose }: ChatWindowProps) {
@@ -75,6 +128,46 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
       peer?: { name?: string };
     }>
   >([]);
+
+  // --- Translation and Search States ---
+  const [translations, setTranslations] = useState<Record<string, string>>({});
+  const [translatingId, setTranslatingId] = useState<string | null>(null);
+  const [activeTranslateMenuId, setActiveTranslateMenuId] = useState<string | null>(null);
+  const [showSearchBar, setShowSearchBar] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // --- Vanishing and GIF States ---
+  const [vanishTime, setVanishTime] = useState<number>(0);
+  const [showVanishMenu, setShowVanishMenu] = useState(false);
+  const [showGifKeyboard, setShowGifKeyboard] = useState(false);
+  const [gifSearchQuery, setGifSearchQuery] = useState("");
+  const [gifResults, setGifResults] = useState<string[]>([]);
+  const [isSearchingGifs, setIsSearchingGifs] = useState(false);
+
+  const vanishOptions = [
+    { label: "Vanish Off", value: 0 },
+    { label: "10 seconds", value: 10 },
+    { label: "30 seconds", value: 30 },
+    { label: "1 minute", value: 60 },
+  ];
+
+  // --- Pinning and Forwarding States ---
+  const [showPinnedDrawer, setShowPinnedDrawer] = useState(false);
+  const [pinnedMessages, setPinnedMessages] = useState<any[]>([]);
+  const [showForwardModal, setShowForwardModal] = useState(false);
+  const [messageToForward, setMessageToForward] = useState<any>(null);
+  const [userRooms, setUserRooms] = useState<any[]>([]);
+  const [forwardSearchQuery, setForwardSearchQuery] = useState("");
+
+  const filteredMessages = useMemo(() => {
+    if (!searchQuery.trim()) return messages;
+    return messages.filter(
+      (m) =>
+        m.message &&
+        m.message.toLowerCase().includes(searchQuery.toLowerCase()) &&
+        !m.isDeleted
+    );
+  }, [messages, searchQuery]);
 
   const otherParticipant = room.participants.find((p: any) => p._id !== user?._id);
   const isOnline = otherParticipant && onlineUsers.includes(otherParticipant._id);
@@ -143,6 +236,20 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
         setTypingParticipants((prev) => prev.filter((id) => id !== userId));
       };
 
+      const handlePinToggled = ({ messageId, isPinned, message }: any) => {
+        setMessages((prev) =>
+          prev.map((m) => (m._id === messageId ? { ...m, isPinned } : m))
+        );
+        setPinnedMessages((prev) => {
+          if (isPinned) {
+            if (prev.some((pm) => pm._id === messageId)) return prev;
+            return [message, ...prev];
+          } else {
+            return prev.filter((pm) => pm._id !== messageId);
+          }
+        });
+      };
+
       socket.on("receiveMessage", handleNewMessage);
       socket.on("userTyping", handleTyping);
       socket.on("userStoppedTyping", handleStopTyping);
@@ -152,6 +259,7 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
       socket.on("incomingCall", handleIncomingCall);
       socket.on("callEnded", handleCallEnded);
       socket.on("chatCleared", handleChatCleared);
+      socket.on("messagePinToggled", handlePinToggled);
       const handleMessagesSeen = ({
         roomId,
         byUser,
@@ -167,11 +275,18 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
           prev.map((m) => {
             const sid = senderIdOf(m);
             const msgTime = m?.createdAt ? new Date(m.createdAt).getTime() : 0;
-            return sid === user?._id && msgTime <= seenAtMs ? { ...m, status: "seen" } : m;
+            return sid === user?._id && msgTime <= seenAtMs ? { ...m, status: "seen", seenAt } : m;
           })
         );
       };
+      const handleMessageVanished = ({ messageId, roomId: vRoomId }: { messageId: string, roomId: string }) => {
+        if (String(vRoomId) === String(room._id)) {
+          setMessages((prev) => prev.filter((m) => m._id !== messageId));
+        }
+      };
+
       socket.on("messagesSeen", handleMessagesSeen);
+      socket.on("messageVanished", handleMessageVanished);
 
       return () => {
         socket.emit("leaveRoom", room._id);
@@ -185,6 +300,8 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
         socket.off("callEnded", handleCallEnded);
         socket.off("chatCleared", handleChatCleared);
         socket.off("messagesSeen", handleMessagesSeen);
+        socket.off("messageVanished", handleMessageVanished);
+        socket.off("messagePinToggled", handlePinToggled);
       };
     }
   }, [room._id, socket, otherParticipant?._id, user?._id]);
@@ -206,6 +323,81 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
     }
   };
 
+  const handleTranslate = async (messageId: string, text: string, targetLang: string) => {
+    setTranslatingId(messageId);
+    setActiveTranslateMenuId(null);
+    try {
+      const res = await API.post("/messages/translate", { text, targetLang });
+      setTranslations((prev) => ({ ...prev, [messageId]: res.data.translatedText }));
+    } catch (err) {
+      toast.error("Failed to translate message");
+    } finally {
+      setTranslatingId(null);
+    }
+  };
+
+  const handleTogglePin = async (messageId: string) => {
+    try {
+      const res = await API.put(`/messages/${messageId}/pin`);
+      toast.success(res.data.message);
+      const updatedMsg = res.data.msg;
+      setMessages((prev) =>
+        prev.map((m) => (m._id === messageId ? { ...m, isPinned: updatedMsg.isPinned } : m))
+      );
+      setPinnedMessages((prev) => {
+        if (updatedMsg.isPinned) {
+          if (prev.some((pm) => pm._id === messageId)) return prev;
+          return [updatedMsg, ...prev];
+        } else {
+          return prev.filter((pm) => pm._id !== messageId);
+        }
+      });
+    } catch {
+      toast.error("Failed to pin/unpin message");
+    }
+  };
+
+  const fetchPinnedMessages = async () => {
+    try {
+      const res = await API.get(`/messages/room/${room._id}/pinned`);
+      setPinnedMessages(res.data || []);
+    } catch {
+      toast.error("Failed to load pinned messages");
+    }
+  };
+
+  const handleForwardClick = async (msg: any) => {
+    setMessageToForward(msg);
+    setShowForwardModal(true);
+    try {
+      const res = await API.get("/rooms");
+      setUserRooms(res.data || []);
+    } catch {
+      toast.error("Failed to load rooms for forwarding");
+    }
+  };
+
+  const handleForwardMessage = async (targetRoomId: string) => {
+    if (!messageToForward) return;
+    try {
+      const formData = new FormData();
+      formData.append("roomId", targetRoomId);
+      formData.append("message", messageToForward.message || "");
+      formData.append("isForwarded", "true");
+      if (messageToForward.fileUrl) {
+        formData.append("fileUrl", messageToForward.fileUrl);
+        formData.append("fileType", messageToForward.fileType);
+        formData.append("fileName", messageToForward.fileName || "");
+      }
+      await API.post("/messages/send", formData);
+      toast.success("Message forwarded!");
+      setShowForwardModal(false);
+      setMessageToForward(null);
+    } catch {
+      toast.error("Failed to forward message");
+    }
+  };
+
   const markSeen = async () => {
     try {
       await API.put(`/messages/${room._id}/seen`);
@@ -223,6 +415,51 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
     }
   };
 
+  // --- Giphy Fetch Effect ---
+  useEffect(() => {
+    if (!showGifKeyboard) return;
+    
+    const key = process.env.NEXT_PUBLIC_GIPHY_API_KEY;
+    if (!key) {
+      const query = gifSearchQuery.trim();
+      const results = searchLocalGifs(query);
+      setGifResults(results);
+      return;
+    }
+
+    let active = true;
+    const fetchGifs = async () => {
+      setIsSearchingGifs(true);
+      try {
+        const query = gifSearchQuery.trim();
+        const url = query 
+          ? `https://api.giphy.com/v1/gifs/search?api_key=${key}&q=${encodeURIComponent(query)}&limit=12`
+          : `https://api.giphy.com/v1/gifs/trending?api_key=${key}&limit=12`;
+        const response = await fetch(url);
+        const data = await response.json();
+        if (active && data.data) {
+          const urls = data.data.map((gif: any) => gif.images?.fixed_height_downsampled?.url || gif.images?.fixed_height?.url).filter(Boolean);
+          setGifResults(urls);
+        }
+      } catch (err) {
+        console.error("Giphy API error, falling back to local:", err);
+        const results = searchLocalGifs(gifSearchQuery.trim());
+        setGifResults(results);
+      } finally {
+        if (active) setIsSearchingGifs(false);
+      }
+    };
+
+    const delayDebounceFn = setTimeout(() => {
+      fetchGifs();
+    }, 400);
+
+    return () => {
+      active = false;
+      clearTimeout(delayDebounceFn);
+    };
+  }, [gifSearchQuery, showGifKeyboard]);
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim()) return;
@@ -233,6 +470,7 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
       formData.append("message", newMessage);
       if (replyTo?._id) formData.append("replyTo", replyTo._id);
       if (file) formData.append("file", file);
+      if (vanishTime > 0) formData.append("vanishTime", vanishTime.toString());
       await API.post("/messages/send", formData);
       setNewMessage("");
       setFile(null);
@@ -241,6 +479,24 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
       if (socket) socket.emit("stopTyping", { roomId: room._id });
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Failed to send message");
+    }
+  };
+
+  const handleSendGif = async (gifUrl: string) => {
+    try {
+      const formData = new FormData();
+      formData.append("roomId", room._id);
+      formData.append("message", "");
+      formData.append("fileUrl", gifUrl);
+      formData.append("fileType", "image");
+      formData.append("fileName", "GIPHY GIF");
+      if (vanishTime > 0) formData.append("vanishTime", vanishTime.toString());
+      await API.post("/messages/send", formData);
+      setShowGifKeyboard(false);
+      setGifSearchQuery("");
+      fetchSendStatus();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to send GIF");
     }
   };
 
@@ -443,6 +699,15 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
   useEffect(() => {
     setShowCallHistory(false);
     setCallHistory([]);
+    setTranslations({});
+    setShowSearchBar(false);
+    setSearchQuery("");
+    setActiveTranslateMenuId(null);
+    setShowPinnedDrawer(false);
+    setPinnedMessages([]);
+    setShowForwardModal(false);
+    setMessageToForward(null);
+    setForwardSearchQuery("");
   }, [room._id]);
 
   const handleDeleteChat = async () => {
@@ -606,6 +871,40 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
             </>
           )}
           <button
+            title="Pinned messages"
+            type="button"
+            onClick={() => {
+              setShowPinnedDrawer((prev) => {
+                if (!prev) fetchPinnedMessages();
+                return !prev;
+              });
+            }}
+            className={cn(
+              "rounded-xl p-2.5 transition-all",
+              showPinnedDrawer
+                ? "bg-chat-accent/20 text-chat-accent"
+                : "bg-chat-raised/80 text-chat-muted hover:bg-chat-border/80 hover:text-chat-text"
+            )}
+          >
+            <Pin className="h-4 w-4" />
+          </button>
+          <button
+            title="Search messages"
+            type="button"
+            onClick={() => {
+              setShowSearchBar((prev) => !prev);
+              setSearchQuery("");
+            }}
+            className={cn(
+              "rounded-xl p-2.5 transition-all",
+              showSearchBar
+                ? "bg-chat-accent/20 text-chat-accent"
+                : "bg-chat-raised/80 text-chat-muted hover:bg-chat-border/80 hover:text-chat-text"
+            )}
+          >
+            <Search className="h-4 w-4" />
+          </button>
+          <button
             title="More"
             type="button"
             onClick={() => setShowMenu((v) => !v)}
@@ -615,6 +914,40 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
            </button>
         </div>
       </header>
+      {showSearchBar && (
+        <div className="relative z-20 flex shrink-0 items-center justify-between border-b border-chat-border bg-chat-surface px-4 py-2.5 sm:px-6">
+          <div className="flex flex-1 items-center gap-2 rounded-xl border border-chat-border bg-chat-bg px-3 py-1.5 focus-within:border-chat-accent/50">
+            <Search className="h-3.5 w-3.5 text-chat-muted" />
+            <input
+              type="text"
+              placeholder="Search messages in this chat..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-transparent text-xs text-chat-text placeholder:text-chat-muted focus:outline-none"
+              autoFocus
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="text-chat-muted hover:text-chat-text"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setShowSearchBar(false);
+              setSearchQuery("");
+            }}
+            className="ml-3 rounded-lg bg-chat-raised px-3 py-1.5 text-xs text-chat-muted hover:bg-chat-border hover:text-chat-text"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
       {showMenu && (
         <div ref={menuRef} className="absolute right-4 top-16 z-30 w-44 rounded-xl border border-chat-border bg-chat-surface p-1.5 shadow-2xl">
           <button
@@ -698,6 +1031,72 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
         </>
       )}
 
+      {showPinnedDrawer && (
+        <>
+          <button
+            type="button"
+            aria-label="Close pinned drawer backdrop"
+            onClick={() => setShowPinnedDrawer(false)}
+            className="absolute inset-0 z-35 bg-black/20"
+          />
+          <aside className="absolute inset-y-0 right-0 z-40 w-80 border-l border-chat-border bg-chat-surface shadow-2xl flex flex-col">
+            <div className="flex items-center justify-between border-b border-chat-border px-4 py-3 shrink-0">
+              <div className="text-sm font-semibold text-chat-text flex items-center gap-1.5">
+                <Pin className="h-4 w-4 text-chat-accent" />
+                Pinned Messages
+              </div>
+              <button
+                type="button"
+                title="Close pinned drawer"
+                onClick={() => setShowPinnedDrawer(false)}
+                className="rounded-lg p-1.5 text-chat-muted transition-colors hover:bg-chat-raised hover:text-chat-text"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            
+            <div className="custom-scrollbar flex-1 space-y-3 overflow-y-auto p-4 bg-chat-bg/30">
+              {pinnedMessages.length === 0 ? (
+                <div className="rounded-xl border border-chat-border bg-chat-raised/40 p-4 text-center text-xs text-chat-muted">
+                  No pinned messages in this chat.
+                </div>
+              ) : (
+                pinnedMessages.map((pm) => (
+                  <div key={pm._id} className="relative rounded-xl border border-chat-border bg-chat-surface/60 p-3 shadow-sm hover:border-chat-accent/40 group/pin-item transition-all">
+                    <div className="flex items-center justify-between gap-2 mb-1.5">
+                      <span className="text-xs font-bold text-chat-text">
+                        {pm.sender?._id === user?._id ? "You" : pm.sender?.name || "Someone"}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleTogglePin(pm._id)}
+                        className="text-[10px] text-red-400 opacity-0 group-hover/pin-item:opacity-100 transition-opacity hover:underline"
+                      >
+                        Unpin
+                      </button>
+                    </div>
+                    
+                    {pm.fileUrl && (
+                      <div className="mb-1 text-[11px] underline truncate text-chat-muted">
+                        📎 {pm.fileName || "File Attachment"}
+                      </div>
+                    )}
+                    
+                    <p className="text-xs text-chat-muted whitespace-pre-wrap line-clamp-3">
+                      {pm.message || "[Media attachment]"}
+                    </p>
+                    
+                    <div className="mt-2 text-[9px] text-chat-muted/60 text-right">
+                      {new Date(pm.createdAt).toLocaleDateString()} at {new Date(pm.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </aside>
+        </>
+      )}
+
       {/* Messages area — only this region scrolls; header + input stay fixed */}
       <div
         ref={messagesContainerRef}
@@ -720,12 +1119,12 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
             )}
           </div>
         )}
-        {messages.map((msg, i) => {
+        {filteredMessages.map((msg, i) => {
           const isMe =
             getSenderId(msg) === user?._id ||
             msg.sender === user?._id ||
             (typeof msg.sender === "object" && msg.sender?._id === user?._id);
-          const prev = messages[i - 1];
+          const prev = filteredMessages[i - 1];
           const showAvatar =
             i === 0 || (prev ? getSenderId(prev) !== getSenderId(msg) : true);
           const senderPhoto = !isMe ? getSenderPhoto(msg) : undefined;
@@ -764,6 +1163,15 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
                     ? "rounded-br-md bg-chat-bubble-out text-white" 
                     : "rounded-bl-md border border-chat-border bg-chat-bubble-in text-chat-text"
                 )}>
+                   {msg.isForwarded && (
+                     <div className={cn(
+                       "flex items-center gap-1 text-[10px] mb-1.5 italic font-medium opacity-65",
+                       isMe ? "text-white" : "text-chat-muted"
+                     )}>
+                       <CornerUpRight className="h-3.5 w-3.5 shrink-0" />
+                       Forwarded
+                     </div>
+                   )}
                    {msg.replyTo?.message && (
                     <div className="mb-1 px-2 py-1 rounded-lg bg-black/20 text-[11px]">
                       Reply: {msg.replyTo.message}
@@ -788,16 +1196,50 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
                     msg.message
                    )}
                    {msg.isEdited && <span className="text-[10px] opacity-70 ml-2">(edited)</span>}
+                   {translatingId === msg._id && (
+                     <div className="mt-1 flex items-center gap-1.5 text-xs text-chat-muted italic animate-pulse">
+                       <Languages className="h-3 w-3 animate-spin text-chat-accent" />
+                       Translating...
+                     </div>
+                   )}
+                   {translations[msg._id] && (
+                     <div className="mt-1.5 border-t border-white/10 pt-1.5 text-xs text-amber-200/90 font-medium">
+                       <div className="flex items-center justify-between text-[9px] uppercase tracking-wider text-white/40 mb-0.5">
+                         <span>Translation</span>
+                         <button
+                           type="button"
+                           onClick={() => {
+                             setTranslations((prev) => {
+                               const next = { ...prev };
+                               delete next[msg._id];
+                               return next;
+                             });
+                           }}
+                           className="normal-case underline hover:text-white"
+                         >
+                           Hide
+                         </button>
+                       </div>
+                       <p className="whitespace-pre-wrap">{translations[msg._id]}</p>
+                     </div>
+                   )}
                    <div className="flex gap-1 mt-1">
                     {(msg.reactions || []).map((r: any, idx: number) => (
                       <span key={idx} className="text-xs bg-black/20 px-1.5 rounded">{r.emoji}</span>
                     ))}
                    </div>
                    <div className={cn(
-                     "mt-1 flex items-center justify-end gap-1 text-[9px]",
-                     isMe ? "text-white/70" : "text-chat-muted"
-                   )}>
-                     {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      "mt-1 flex items-center justify-end gap-1.5 text-[9px]",
+                      isMe ? "text-white/70" : "text-chat-muted"
+                    )}>
+                      {msg.isPinned && <Pin className="h-2.5 w-2.5 rotate-45 text-chat-accent shrink-0" />}
+                      {msg.vanishTime > 0 && msg.status === "seen" && (
+                        <VanishTimer message={msg} />
+                      )}
+                      {msg.vanishTime > 0 && msg.status !== "seen" && (
+                        <span className="text-amber-400 font-bold ml-1" title={`Vanishes ${msg.vanishTime}s after seen`}>🔥</span>
+                      )}
+                      {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                      {isMe &&
                        (msg.status === "seen" ? (
                          <CheckCheck className="h-3 w-3 text-white" aria-hidden />
@@ -811,6 +1253,70 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
                 <div className="mt-1 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                   <button title="Reply" type="button" onClick={() => setReplyTo(msg)} className="rounded p-1 hover:bg-chat-raised"><Reply className="h-3 w-3" /></button>
                   <button title="React" type="button" onClick={() => API.post(`/messages/${msg._id}/react`, { emoji: "❤️" })} className="rounded p-1 text-xs hover:bg-chat-raised">❤️</button>
+                  {!msg.isDeleted && (
+                    <>
+                      <button
+                        title={msg.isPinned ? "Unpin message" : "Pin message"}
+                        type="button"
+                        onClick={() => handleTogglePin(msg._id)}
+                        className={cn(
+                          "rounded p-1 transition-all",
+                          msg.isPinned ? "text-chat-accent hover:bg-chat-raised" : "hover:bg-chat-raised text-chat-text"
+                        )}
+                      >
+                        <Pin className="h-3 w-3 rotate-45" />
+                      </button>
+                      <button
+                        title="Forward message"
+                        type="button"
+                        onClick={() => handleForwardClick(msg)}
+                        className="rounded p-1 hover:bg-chat-raised text-chat-text"
+                      >
+                        <CornerUpRight className="h-3 w-3" />
+                      </button>
+                    </>
+                  )}
+                  {!msg.isDeleted && msg.message && (
+                    <div className="relative">
+                      <button
+                        title="Translate"
+                        type="button"
+                        onClick={() => setActiveTranslateMenuId((id) => (id === msg._id ? null : msg._id))}
+                        className={cn(
+                          "rounded p-1 transition-all",
+                          activeTranslateMenuId === msg._id
+                            ? "bg-chat-accent/20 text-chat-accent"
+                            : "hover:bg-chat-raised text-chat-text"
+                        )}
+                      >
+                        <Languages className="h-3 w-3" />
+                      </button>
+                      
+                      {activeTranslateMenuId === msg._id && (
+                        <div className="absolute bottom-6 left-0 z-30 flex flex-col gap-0.5 rounded-lg border border-chat-border bg-chat-surface p-1 shadow-xl min-w-[100px]">
+                          {[
+                            { code: "hi", name: "Hindi" },
+                            { code: "en", name: "English" },
+                            { code: "es", name: "Spanish" },
+                            { code: "fr", name: "French" },
+                            { code: "de", name: "German" },
+                            { code: "ja", name: "Japanese" },
+                            { code: "zh", name: "Chinese" },
+                            { code: "ar", name: "Arabic" },
+                          ].map((lang) => (
+                            <button
+                              key={lang.code}
+                              type="button"
+                              onClick={() => handleTranslate(msg._id, msg.message, lang.code)}
+                              className="w-full rounded px-2 py-1 text-left text-[11px] hover:bg-chat-raised text-chat-text"
+                            >
+                              {lang.name}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                   {isMe && (
                     <>
                       <button title="Edit" type="button" onClick={() => startEdit(msg)} className="rounded p-1 hover:bg-chat-raised"><Pencil className="h-3 w-3" /></button>
@@ -846,7 +1352,7 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
       </div>
 
       {/* Input area */}
-      <footer className="relative z-10 shrink-0 border-t border-chat-border/60 bg-linear-to-t from-chat-bg via-chat-bg to-transparent p-4 sm:p-6">
+      <footer className="relative z-10 shrink-0 border-t border-chat-border/60 bg-linear-to-t from-chat-bg via-chat-bg to-transparent p-4 pb-16 sm:p-6 md:pb-6">
         {!sendStatus.canSend ? (
           <div className="mx-auto max-w-4xl rounded-2xl border border-chat-border bg-chat-surface/90 p-4 text-center backdrop-blur-md">
             <p className="mb-3 text-sm font-medium text-chat-muted">
@@ -871,7 +1377,7 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
             ) : null}
           </div>
         ) : (
-          <form onSubmit={handleSendMessage} className="relative mx-auto flex max-w-4xl items-center gap-2 sm:gap-3">
+          <form onSubmit={handleSendMessage} className="relative mx-auto flex max-w-4xl items-center gap-2 sm:gap-3 w-full">
             {replyTo && (
               <div className="absolute -top-11 left-0 right-0 mx-auto flex max-w-4xl items-center justify-between rounded-xl border border-chat-border bg-chat-surface px-3 py-2 text-xs text-chat-text">
                 <span className="truncate pr-2">Replying to: {replyTo.message?.slice(0, 60)}</span>
@@ -886,6 +1392,43 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
                 onChange={handleInputChange}
                 className="min-w-0 flex-1 bg-transparent py-2 text-sm text-chat-text placeholder:text-chat-muted focus:outline-none"
               />
+              
+              <button
+                type="button"
+                title="GIF keyboard"
+                onClick={() => {
+                  setShowGifKeyboard((prev) => !prev);
+                  setShowVanishMenu(false);
+                }}
+                className={cn(
+                  "p-2 text-chat-muted transition-colors hover:text-chat-accent",
+                  showGifKeyboard && "text-chat-accent"
+                )}
+              >
+                <Smile className="h-5 w-5" />
+              </button>
+
+              <button
+                type="button"
+                title="Vanish Timer"
+                onClick={() => {
+                  setShowVanishMenu((prev) => !prev);
+                  setShowGifKeyboard(false);
+                }}
+                className={cn(
+                  "p-2 text-chat-muted transition-colors hover:text-chat-accent relative",
+                  vanishTime > 0 && "text-red-400"
+                )}
+              >
+                <Clock className="h-5 w-5" />
+                {vanishTime > 0 && (
+                  <span className="absolute top-1 right-1 flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                  </span>
+                )}
+              </button>
+
               <label title="Attach file" className="cursor-pointer p-2 text-chat-muted transition-colors hover:text-chat-accent">
                 <Paperclip className="h-5 w-5" />
                 <input aria-label="Attach file" type="file" className="hidden" onChange={(e) => setFile(e.target.files?.[0] || null)} />
@@ -899,6 +1442,77 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
             >
               <Send className="h-5 w-5 translate-x-0.5 -translate-y-0.5 transition-transform group-hover:scale-110" />
             </button>
+
+            {/* Vanish Timer Popover */}
+            {showVanishMenu && (
+              <div className="absolute bottom-16 right-16 z-30 w-40 rounded-xl border border-chat-border bg-chat-surface p-1.5 shadow-2xl">
+                <p className="px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-chat-muted">Vanish Timer</p>
+                {vanishOptions.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => {
+                      setVanishTime(opt.value);
+                      setShowVanishMenu(false);
+                      toast.success(opt.value > 0 ? `Vanish Mode: ${opt.label}` : "Vanish Mode disabled");
+                    }}
+                    className={cn(
+                      "flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-xs font-semibold text-chat-text hover:bg-chat-raised",
+                      vanishTime === opt.value && "bg-chat-raised text-chat-accent"
+                    )}
+                  >
+                    <span>{opt.label}</span>
+                    {vanishTime === opt.value && <span className="text-[10px]">🔥</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* GIF Keyboard Popover */}
+            {showGifKeyboard && (
+              <div className="absolute bottom-16 left-4 right-4 z-30 max-w-sm rounded-2xl border border-chat-border bg-chat-surface p-4 shadow-2xl flex flex-col h-64">
+                <div className="flex items-center gap-2 mb-3">
+                  <input
+                    type="text"
+                    placeholder="Search GIFs..."
+                    value={gifSearchQuery}
+                    onChange={(e) => setGifSearchQuery(e.target.value)}
+                    className="w-full bg-chat-bg border border-chat-border rounded-xl py-1.5 px-3 text-xs focus:outline-none focus:border-chat-accent/50"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowGifKeyboard(false);
+                      setGifSearchQuery("");
+                    }}
+                    className="text-xs text-chat-muted hover:text-chat-text font-bold"
+                  >
+                    Close
+                  </button>
+                </div>
+                <div className="grid grid-cols-3 gap-2 overflow-y-auto flex-1 custom-scrollbar">
+                  {isSearchingGifs ? (
+                    <div className="col-span-3 flex items-center justify-center py-10 text-xs text-chat-muted">
+                      Searching...
+                    </div>
+                  ) : gifResults.length === 0 ? (
+                    <div className="col-span-3 flex items-center justify-center py-10 text-xs text-chat-muted">
+                      No GIFs found
+                    </div>
+                  ) : (
+                    gifResults.map((url, idx) => (
+                      <div
+                        key={idx}
+                        onClick={() => handleSendGif(url)}
+                        className="h-16 rounded-lg overflow-hidden border border-black/5 dark:border-white/5 cursor-pointer hover:scale-105 transition-transform relative group bg-chat-bg"
+                      >
+                        <img src={url} className="h-full w-full object-cover" alt="GIF" />
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
           </form>
         )}
       </footer>
@@ -926,6 +1540,80 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
                 <button title="End call" type="button" onClick={() => endCall()} className="mt-4 rounded-xl bg-red-600 px-4 py-2 font-medium text-white">End call</button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {showForwardModal && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 p-6 backdrop-blur-xs">
+          <div className="w-full max-w-md rounded-2xl border border-chat-border bg-chat-surface p-5 shadow-2xl flex flex-col max-h-[80vh]">
+            <div className="flex items-center justify-between border-b border-chat-border pb-3 mb-4 shrink-0">
+              <h3 className="text-base font-bold text-chat-text flex items-center gap-1.5">
+                <CornerUpRight className="h-4 w-4 text-chat-accent" />
+                Forward Message
+              </h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowForwardModal(false);
+                  setMessageToForward(null);
+                }}
+                className="rounded-lg p-1 text-chat-muted hover:bg-chat-raised hover:text-chat-text"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="mb-3 shrink-0">
+              <input
+                type="text"
+                placeholder="Search chats..."
+                value={forwardSearchQuery}
+                onChange={(e) => setForwardSearchQuery(e.target.value)}
+                className="w-full rounded-xl border border-chat-border bg-chat-bg px-3 py-2 text-xs text-chat-text focus:outline-none focus:border-chat-accent/40"
+              />
+            </div>
+
+            <div className="custom-scrollbar flex-1 overflow-y-auto space-y-2 pr-1">
+              {userRooms
+                .filter((r) => {
+                  const other = r.participants.find((p: any) => p._id !== user?._id);
+                  const name = r.isGroup ? r.name : (other?.name || "Direct Chat");
+                  return name.toLowerCase().includes(forwardSearchQuery.toLowerCase());
+                })
+                .map((r) => {
+                  const other = r.participants.find((p: any) => p._id !== user?._id);
+                  const name = r.isGroup ? r.name : (other?.name || "Deleted User");
+                  const avatar = r.isGroup ? r.groupImage : other?.profilePhoto;
+
+                  return (
+                    <div key={r._id} className="flex items-center justify-between p-2.5 rounded-xl hover:bg-chat-raised transition-colors border border-transparent hover:border-chat-border">
+                      <div className="flex items-center gap-3 min-w-0">
+                        {avatar ? (
+                          <img src={resolveMediaUrl(avatar)} alt="" className="h-9 w-9 rounded-xl object-cover shrink-0 border border-chat-border" />
+                        ) : (
+                          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-chat-bg text-xs font-bold text-chat-muted border border-chat-border shrink-0">
+                            {name[0]}
+                          </div>
+                        )}
+                        <span className="text-xs font-bold truncate text-chat-text">{name}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleForwardMessage(r._id)}
+                        className="rounded-lg bg-chat-accent hover:opacity-90 px-3 py-1.5 text-[10px] font-bold text-chat-bg shadow-sm"
+                      >
+                        Send
+                      </button>
+                    </div>
+                  );
+                })}
+              {userRooms.length === 0 && (
+                <div className="text-center text-xs text-chat-muted py-6">
+                  No active chats found.
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

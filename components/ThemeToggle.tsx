@@ -2,8 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { Moon, Sun } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-export default function ThemeToggle() {
+interface ThemeToggleProps {
+  className?: string;
+}
+
+export default function ThemeToggle({ className }: ThemeToggleProps) {
   const [theme, setTheme] = useState<"dark" | "light">("dark");
 
   useEffect(() => {
@@ -30,7 +35,10 @@ export default function ThemeToggle() {
   return (
     <button
       onClick={toggleTheme}
-      className="flex h-10 w-10 items-center justify-center rounded-xl bg-chat-surface border border-chat-border text-chat-muted hover:text-chat-text transition-all hover:scale-105 active:scale-95"
+      className={cn(
+        "flex h-10 w-10 items-center justify-center rounded-xl bg-chat-surface border border-chat-border text-chat-muted hover:text-chat-text transition-all hover:scale-105 active:scale-95",
+        className
+      )}
       title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
     >
       {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
