@@ -24,7 +24,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import UserProfileModal from "@/components/UserProfileModal";
+import dynamic from "next/dynamic";
+const UserProfileModal = dynamic(() => import("@/components/UserProfileModal"), { ssr: false });
 import { resolveMediaUrl } from "@/lib/utils";
 import Logo from "@/components/Logo";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -231,7 +232,7 @@ export default function UsersPage() {
              </div>
           </header>
 
-          <section className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
+          <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
             <AnimatePresence mode="popLayout">
                 {isLoading ? (
                     Array(6).fill(0).map((_, i) => (

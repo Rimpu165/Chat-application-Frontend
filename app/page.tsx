@@ -950,12 +950,12 @@ export default function Home() {
                         {activeMockChat.status === "online" ? (
                           <>
                             <span className="w-1.5 h-1.5 rounded-full bg-chat-success" />
-                            <span>Active now • {activeMockChat.bio}</span>
+                            <span>Active now<span className="hidden md:inline"> • {activeMockChat.bio}</span></span>
                           </>
                         ) : (
                           <>
                             <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                            <span>Away • {activeMockChat.bio}</span>
+                            <span>Away<span className="hidden md:inline"> • {activeMockChat.bio}</span></span>
                           </>
                         )}
                       </p>
