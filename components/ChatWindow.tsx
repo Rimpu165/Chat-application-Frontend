@@ -91,6 +91,7 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
   const router = useRouter();
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState("");
+  const [isSending, setIsSending] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [isTyping, setIsTyping] = useState(false);
   const [typingParticipants, setTypingParticipants] = useState<string[]>([]);
@@ -462,8 +463,9 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim()) return;
+    if (!newMessage.trim() || isSending) return;
 
+    setIsSending(true);
     try {
       const formData = new FormData();
       formData.append("roomId", room._id);
@@ -479,10 +481,14 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
       if (socket) socket.emit("stopTyping", { roomId: room._id });
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Failed to send message");
+    } finally {
+      setIsSending(false);
     }
   };
 
   const handleSendGif = async (gifUrl: string) => {
+    if (isSending) return;
+    setIsSending(true);
     try {
       const formData = new FormData();
       formData.append("roomId", room._id);
@@ -497,6 +503,8 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
       fetchSendStatus();
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Failed to send GIF");
+    } finally {
+      setIsSending(false);
     }
   };
 
