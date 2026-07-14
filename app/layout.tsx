@@ -6,6 +6,7 @@ import { SocketProvider } from "@/context/SocketContext";
 import { Toaster } from "react-hot-toast";
 import Navbar from "@/components/Navbar";
 import NotificationBanner from "@/components/NotificationBanner";
+import { Analytics } from "@vercel/analytics/react";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -44,6 +45,7 @@ export default function RootLayout({
                 duration: 3200,
               }}
             />
+            <Analytics />
           </SocketProvider>
         </AuthProvider>
       </body>
