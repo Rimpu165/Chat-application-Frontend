@@ -91,6 +91,7 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
   const router = useRouter();
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState("");
+  const [isSending, setIsSending] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [isTyping, setIsTyping] = useState(false);
   const [typingParticipants, setTypingParticipants] = useState<string[]>([]);
@@ -110,6 +111,7 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const peerRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
+  const remoteStreamRef = useRef<MediaStream | null>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const [showMenu, setShowMenu] = useState(false);
@@ -462,8 +464,9 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim()) return;
+    if (!newMessage.trim() || isSending) return;
 
+    setIsSending(true);
     try {
       const formData = new FormData();
       formData.append("roomId", room._id);
@@ -479,10 +482,14 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
       if (socket) socket.emit("stopTyping", { roomId: room._id });
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Failed to send message");
+    } finally {
+      setIsSending(false);
     }
   };
 
   const handleSendGif = async (gifUrl: string) => {
+    if (isSending) return;
+    setIsSending(true);
     try {
       const formData = new FormData();
       formData.append("roomId", room._id);
@@ -497,6 +504,8 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
       fetchSendStatus();
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Failed to send GIF");
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -525,6 +534,7 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
       stream.getTracks().forEach((track) => pc.addTrack(track, stream));
 
       pc.ontrack = (event) => {
+        remoteStreamRef.current = event.streams[0];
         if (remoteVideoRef.current) remoteVideoRef.current.srcObject = event.streams[0];
       };
       pc.onicecandidate = (event) => {
@@ -585,6 +595,7 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
       peerRef.current = pc;
       stream.getTracks().forEach((track) => pc.addTrack(track, stream));
       pc.ontrack = (event) => {
+        remoteStreamRef.current = event.streams[0];
         if (remoteVideoRef.current) remoteVideoRef.current.srcObject = event.streams[0];
       };
       pc.onicecandidate = (event) => {
@@ -636,6 +647,7 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
     peerRef.current = null;
     localStreamRef.current?.getTracks().forEach((t) => t.stop());
     localStreamRef.current = null;
+    remoteStreamRef.current = null;
     setIncomingCall(null);
     setCallActive(false);
     setActiveCallIsVideo(false);
@@ -695,6 +707,21 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
       document.removeEventListener("mousedown", onDocClick);
     };
   }, [showMenu]);
+
+  // Sync WebRTC video streams with video elements once they are mounted in DOM
+  useEffect(() => {
+    if (callActive) {
+      const timer = setInterval(() => {
+        if (localVideoRef.current && localStreamRef.current && !localVideoRef.current.srcObject) {
+          localVideoRef.current.srcObject = localStreamRef.current;
+        }
+        if (remoteVideoRef.current && remoteStreamRef.current && !remoteVideoRef.current.srcObject) {
+          remoteVideoRef.current.srcObject = remoteStreamRef.current;
+        }
+      }, 100);
+      return () => clearInterval(timer);
+    }
+  }, [callActive]);
 
   useEffect(() => {
     setShowCallHistory(false);
@@ -1534,8 +1561,8 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
                   Call duration: <span className="font-semibold text-chat-text">{liveCallDurationLabel}</span>
                 </div>
                 <div className="grid gap-3 md:grid-cols-2">
-                  <video ref={localVideoRef} autoPlay muted className="h-52 w-full rounded-xl bg-black object-cover" />
-                  <video ref={remoteVideoRef} autoPlay className="h-52 w-full rounded-xl bg-black object-cover" />
+                  <video ref={localVideoRef} autoPlay muted playsInline className="h-52 w-full rounded-xl bg-black object-cover" />
+                  <video ref={remoteVideoRef} autoPlay playsInline className="h-52 w-full rounded-xl bg-black object-cover" />
                 </div>
                 <button title="End call" type="button" onClick={() => endCall()} className="mt-4 rounded-xl bg-red-600 px-4 py-2 font-medium text-white">End call</button>
               </div>
