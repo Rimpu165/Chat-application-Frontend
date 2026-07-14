@@ -1542,8 +1542,8 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
                   Call duration: <span className="font-semibold text-chat-text">{liveCallDurationLabel}</span>
                 </div>
                 <div className="grid gap-3 md:grid-cols-2">
-                  <video ref={localVideoRef} autoPlay muted className="h-52 w-full rounded-xl bg-black object-cover" />
-                  <video ref={remoteVideoRef} autoPlay className="h-52 w-full rounded-xl bg-black object-cover" />
+                  <video ref={localVideoRef} autoPlay muted playsInline className="h-52 w-full rounded-xl bg-black object-cover" />
+                  <video ref={remoteVideoRef} autoPlay playsInline className="h-52 w-full rounded-xl bg-black object-cover" />
                 </div>
                 <button title="End call" type="button" onClick={() => endCall()} className="mt-4 rounded-xl bg-red-600 px-4 py-2 font-medium text-white">End call</button>
               </div>
