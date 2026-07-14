@@ -464,7 +464,7 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || isSending) return;
+    if ((!newMessage.trim() && !file) || isSending) return;
 
     setIsSending(true);
     try {
