@@ -111,6 +111,7 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const peerRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
+  const remoteStreamRef = useRef<MediaStream | null>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const [showMenu, setShowMenu] = useState(false);
@@ -533,6 +534,7 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
       stream.getTracks().forEach((track) => pc.addTrack(track, stream));
 
       pc.ontrack = (event) => {
+        remoteStreamRef.current = event.streams[0];
         if (remoteVideoRef.current) remoteVideoRef.current.srcObject = event.streams[0];
       };
       pc.onicecandidate = (event) => {
@@ -593,6 +595,7 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
       peerRef.current = pc;
       stream.getTracks().forEach((track) => pc.addTrack(track, stream));
       pc.ontrack = (event) => {
+        remoteStreamRef.current = event.streams[0];
         if (remoteVideoRef.current) remoteVideoRef.current.srcObject = event.streams[0];
       };
       pc.onicecandidate = (event) => {
@@ -644,6 +647,7 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
     peerRef.current = null;
     localStreamRef.current?.getTracks().forEach((t) => t.stop());
     localStreamRef.current = null;
+    remoteStreamRef.current = null;
     setIncomingCall(null);
     setCallActive(false);
     setActiveCallIsVideo(false);
@@ -703,6 +707,21 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
       document.removeEventListener("mousedown", onDocClick);
     };
   }, [showMenu]);
+
+  // Sync WebRTC video streams with video elements once they are mounted in DOM
+  useEffect(() => {
+    if (callActive) {
+      const timer = setInterval(() => {
+        if (localVideoRef.current && localStreamRef.current && !localVideoRef.current.srcObject) {
+          localVideoRef.current.srcObject = localStreamRef.current;
+        }
+        if (remoteVideoRef.current && remoteStreamRef.current && !remoteVideoRef.current.srcObject) {
+          remoteVideoRef.current.srcObject = remoteStreamRef.current;
+        }
+      }, 100);
+      return () => clearInterval(timer);
+    }
+  }, [callActive]);
 
   useEffect(() => {
     setShowCallHistory(false);
