@@ -55,7 +55,7 @@ export default function Logo({ className, size = "md", showText = false }: LogoP
       </div>
       {showText && (
         <span className={cn(
-          "font-black tracking-tighter text-chat-text uppercase",
+          "font-black tracking-tighter text-chat-text uppercase whitespace-nowrap",
           size === "sm" ? "text-sm" : size === "md" ? "text-xl" : "text-3xl"
         )}>
           Chat<span className="text-chat-accent">iq</span>

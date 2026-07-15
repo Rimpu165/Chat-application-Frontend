@@ -123,29 +123,29 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const logout = async () => {
-    try {
-      if (typeof window !== "undefined" && "serviceWorker" in navigator && "PushManager" in window) {
-        const registration = await navigator.serviceWorker.ready;
-        const subscription = await registration.pushManager.getSubscription();
-        if (subscription) {
-          const endpoint = subscription.endpoint;
-          // Delete subscription from backend
-          await API.delete("/users/push-unsubscribe", { data: { endpoint } });
-          // Unsubscribe locally
-          await subscription.unsubscribe();
-        }
-      }
-    } catch (err) {
-      console.error("Error during push unsubscribe on logout:", err);
-    }
-
+  const logout = () => {
+    // Clear auth state and redirect immediately — don't block on async operations
     setToken(null);
     setUser(null);
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     toast.success("Logged out");
     router.push("/login");
+
+    // Unsubscribe push in background (non-blocking)
+    if (typeof window !== "undefined" && "serviceWorker" in navigator && "PushManager" in window) {
+      navigator.serviceWorker.ready
+        .then((registration) => registration.pushManager.getSubscription())
+        .then((subscription) => {
+          if (subscription) {
+            return API.delete("/users/push-unsubscribe", { data: { endpoint: subscription.endpoint } })
+              .finally(() => subscription.unsubscribe());
+          }
+        })
+        .catch((err) => {
+          console.error("Error during push unsubscribe on logout:", err);
+        });
+    }
   };
 
   const updateUser = (data: Partial<User>) => {

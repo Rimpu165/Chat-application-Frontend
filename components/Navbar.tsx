@@ -22,6 +22,7 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -49,6 +50,7 @@ export default function Navbar() {
   };
 
   useEffect(() => {
+    setMounted(true);
     const handleScroll = () => setScrolled(window.scrollY > 10);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
@@ -62,12 +64,13 @@ export default function Navbar() {
     { name: "Requests", href: "/requests", icon: <Bell className="w-4 h-4" /> },
   ];
 
-  if (!user) return null;
+  if (!mounted || !user) return null;
 
   return (
     <>
+    {/* Desktop/Tablet Floating Navigation Hub */}
     <nav className={cn(
-      "fixed top-0 inset-x-0 z-[60] px-6 py-5 transition-all duration-500",
+      "global-top-nav fixed top-0 inset-x-0 z-[60] px-6 py-5 transition-all duration-500",
       scrolled 
         ? "bg-chat-surface/70 backdrop-blur-2xl border-b border-chat-border shadow-2xl py-3" 
         : "bg-gradient-to-b from-chat-bg via-chat-bg/80 to-transparent"
@@ -191,7 +194,7 @@ export default function Navbar() {
     </nav>
 
     {/* Mobile Bottom Navigation Bar */}
-    <div className="fixed bottom-0 inset-x-0 z-[60] md:hidden bg-chat-surface/85 backdrop-blur-2xl border-t border-chat-border/60 py-2 px-2 shadow-[0_-10px_30px_rgba(0,0,0,0.3)] flex items-center justify-around">
+    <div className="mobile-bottom-nav fixed bottom-0 inset-x-0 z-[60] md:hidden bg-chat-surface/85 backdrop-blur-2xl border-t border-chat-border/60 py-2 px-2 shadow-[0_-10px_30px_rgba(0,0,0,0.3)] flex items-center justify-around">
       {navLinks.map((link) => {
         const isActive = pathname === link.href;
         return (

@@ -131,3 +131,14 @@ textarea,
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
 }
+
+/* Responsive Overrides when a Chat Room is open on mobile */
+@media (max-width: 767px) {
+  body.chat-room-open .global-top-nav {
+    display: none !important;
+  }
+  body.chat-room-open .mobile-bottom-nav {
+    display: none !important;
+  }
+}
+
