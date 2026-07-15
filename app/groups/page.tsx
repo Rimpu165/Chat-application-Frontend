@@ -36,7 +36,7 @@ const GroupSkeleton = () => (
 
 export default function GroupsPage() {
   const { user, loading } = useAuth();
-  const { socket } = useSocket();
+  const { socket, onlineUsers } = useSocket();
   const router = useRouter();
   
   const [friends, setFriends] = useState<any[]>([]);
@@ -236,8 +236,6 @@ export default function GroupsPage() {
   );
 
   if (loading || !user) return null;
-
-  const { onlineUsers } = useSocket();
 
   return (
     <div className="relative min-h-screen bg-chat-bg text-chat-text overflow-x-hidden pt-24 pb-24 md:pb-12">

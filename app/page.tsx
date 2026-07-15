@@ -646,11 +646,11 @@ export default function Home() {
            </div>
         </main>
 
-        <footer className="border-t border-chat-surface bg-chat-bg/50 py-10 md:py-20 px-4 md:px-6">
-           <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8 md:gap-12">
-              <div className="space-y-4 md:space-y-6">
+        <footer className="border-t border-chat-surface bg-chat-bg/50 pt-10 pb-28 md:py-20 px-4 md:px-6">
+           <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
+              <div className="col-span-2 md:col-span-1 space-y-4 md:space-y-6">
                     <Logo size="md" showText />
-                    <p className="text-chat-muted text-xs md:text-sm leading-relaxed">
+                    <p className="text-chat-muted text-xs md:text-sm leading-relaxed max-w-sm">
                        The next generation of social networking. Real-time, secure, and built for discovery.
                     </p>
                     <div className="flex gap-3 md:gap-4">
@@ -666,7 +666,7 @@ export default function Home() {
                     </div>
               </div>
               
-              <div className="space-y-6">
+              <div className="col-span-1 space-y-6">
                  <h4 className="text-sm font-black uppercase tracking-widest text-chat-text">Platform</h4>
                  <ul className="space-y-3 text-chat-muted text-sm font-medium">
                     <li className="hover:text-blue-400 cursor-pointer transition-colors">Global Chat</li>
@@ -676,7 +676,7 @@ export default function Home() {
                  </ul>
               </div>
 
-              <div className="space-y-6">
+              <div className="col-span-1 space-y-6">
                  <h4 className="text-sm font-black uppercase tracking-widest text-chat-text">Resources</h4>
                  <ul className="space-y-3 text-chat-muted text-sm font-medium">
                     <li className="hover:text-blue-400 cursor-pointer transition-colors">Help Center</li>
@@ -686,18 +686,18 @@ export default function Home() {
                  </ul>
               </div>
 
-              <div className="space-y-6">
+              <div className="col-span-2 md:col-span-1 space-y-6">
                  <h4 className="text-sm font-black uppercase tracking-widest text-chat-text">Contact</h4>
                  <ul className="space-y-3 text-chat-muted text-sm font-medium">
-                    <li className="flex items-center gap-3"><Mail className="h-4 w-4" /> support@chatiq.app</li>
-                    <li className="flex items-center gap-3"><MapPin className="h-4 w-4" /> Silicon Valley, CA</li>
-                    <li className="flex items-center gap-3 font-bold text-blue-400 underline cursor-pointer">Live Status: Operational</li>
+                    <li className="flex items-center gap-3"><Mail className="h-4 w-4 shrink-0" /> <span className="truncate">support@chatiq.app</span></li>
+                    <li className="flex items-center gap-3"><MapPin className="h-4 w-4 shrink-0" /> <span>Silicon Valley, CA</span></li>
+                    <li className="flex items-center gap-3 font-bold text-blue-400 underline cursor-pointer truncate">Live Status: Operational</li>
                  </ul>
               </div>
            </div>
            
            <div className="max-w-7xl mx-auto mt-20 pt-8 border-t border-chat-surface flex flex-col md:flex-row justify-between items-center gap-6">
-              <p className="text-chat-muted text-xs font-bold uppercase tracking-widest">© {new Date().getFullYear()} CHATIQ. ALL RIGHTS RESERVED.</p>
+              <p className="text-chat-muted text-xs font-bold uppercase tracking-widest text-center">© {new Date().getFullYear()} CHATIQ. ALL RIGHTS RESERVED.</p>
               <div className="flex gap-8 text-chat-muted text-xs font-bold">
                  <span>SECURED BY JWT</span>
                  <span>PULSE DISCOVERY</span>
@@ -725,28 +725,29 @@ export default function Home() {
 
       {/* Floating Apple-Style Glass Navbar */}
       <nav className={`fixed inset-x-0 top-0 z-50 transition-all duration-500 px-4 md:px-8 py-6 ${scrolled ? 'pt-4' : 'pt-6'}`}>
-        <div className={`mx-auto max-w-7xl rounded-3xl border border-black/10 dark:border-white/5 bg-white/95 dark:bg-black/25 backdrop-blur-2xl px-6 py-3.5 flex items-center justify-between transition-all duration-300 shadow-[0_8px_32px_rgba(0,0,0,0.04)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.12)] ${scrolled ? 'shadow-[0_12px_40px_rgba(0,0,0,0.08)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.3)] bg-white dark:bg-black/40 border-black/15 dark:border-white/10' : ''}`}>
-          <div className="flex items-center gap-2.5">
+        <div className={`mx-auto max-w-7xl rounded-3xl border border-black/10 dark:border-white/5 bg-white/95 dark:bg-black/25 backdrop-blur-2xl px-4 sm:px-6 py-2.5 sm:py-3.5 flex items-center justify-between transition-all duration-300 shadow-[0_8px_32px_rgba(0,0,0,0.04)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.12)] ${scrolled ? 'shadow-[0_12px_40px_rgba(0,0,0,0.08)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.3)] bg-white dark:bg-black/40 border-black/15 dark:border-white/10' : ''}`}>
+          <div className="flex items-center gap-2">
             <div className="p-1">
               <Logo size="sm" />
             </div>
-            <span className="text-lg font-black tracking-tight uppercase text-chat-text">Chatiq</span>
+            <span className="text-base sm:text-lg font-black tracking-tight uppercase text-chat-text">Chatiq</span>
           </div>
           
-          <div className="flex items-center gap-3 sm:gap-4">
+          <div className="flex items-center gap-1.5 sm:gap-4">
             <Link
               href="/login"
-              className="rounded-full px-3 py-1.5 sm:px-5 sm:py-2 text-xs sm:text-sm font-bold text-chat-muted hover:text-chat-text transition-colors"
+              className="rounded-full px-2.5 py-1.5 sm:px-5 sm:py-2 text-xs sm:text-sm font-bold text-chat-muted hover:text-chat-text transition-colors"
             >
               Log in
             </Link>
             <Link
               href="/signup"
-              className="rounded-full bg-chat-text text-chat-bg px-4 py-2 sm:px-6 sm:py-2.5 text-xs sm:text-sm font-black tracking-tight shadow-lg shadow-chat-text/10 transition-all hover:scale-[1.03] active:scale-[0.97]"
+              className="rounded-full bg-chat-text text-chat-bg px-3.5 py-2 sm:px-6 sm:py-2.5 text-xs sm:text-sm font-black tracking-tight shadow-lg shadow-chat-text/10 transition-all hover:scale-[1.03] active:scale-[0.97]"
             >
-              Create Account
+              <span className="hidden sm:inline">Create Account</span>
+              <span className="inline sm:hidden">Sign Up</span>
             </Link>
-            <div className="h-6 w-[1px] bg-chat-border/50" />
+            <div className="hidden sm:block h-6 w-[1px] bg-chat-border/50" />
             <ThemeToggle />
           </div>
         </div>
@@ -768,7 +769,7 @@ export default function Home() {
             Real-Time Engine v2.0
           </div>
           
-          <h1 className="mb-6 text-5xl sm:text-7xl md:text-8xl font-black leading-[0.95] tracking-tighter text-chat-text">
+          <h1 className="mb-6 text-4xl min-[400px]:text-5xl sm:text-7xl md:text-8xl font-black leading-[0.95] tracking-tighter text-chat-text">
             Instant Chat. <br/>
             <span className="bg-gradient-to-r from-blue-400 via-teal-300 to-indigo-500 bg-clip-text text-transparent">
               Apple-Like Glass.
@@ -779,16 +780,16 @@ export default function Home() {
             A premium real-time messaging application designed with frosted glassmorphism, instant search engines, private showcases, and custom WebRTC calls.
           </p>
 
-          <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-6">
+          <div className="mt-10 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-4 sm:gap-6 w-full max-w-md sm:max-w-none mx-auto px-4">
             <Link
               href="/signup"
-              className="group flex h-14 items-center gap-3 rounded-2xl bg-chat-accent px-8 font-black text-white shadow-xl shadow-chat-accent/20 transition-all hover:translate-y-[-2px] active:translate-y-0"
+              className="group flex h-14 items-center justify-center gap-3 rounded-2xl bg-chat-accent px-8 font-black text-white shadow-xl shadow-chat-accent/20 transition-all hover:translate-y-[-2px] active:translate-y-0 w-full sm:w-auto text-center"
             >
               Get Started <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </Link>
             <a
               href="#interactive-mockup"
-              className="flex h-14 items-center px-8 rounded-2xl bg-white dark:bg-white/5 border border-black/10 dark:border-white/5 font-black text-chat-text hover:bg-slate-50 dark:hover:bg-white/10 transition-all backdrop-blur-md"
+              className="flex h-14 items-center justify-center px-8 rounded-2xl bg-white dark:bg-white/5 border border-black/10 dark:border-white/5 font-black text-chat-text hover:bg-slate-50 dark:hover:bg-white/10 transition-all backdrop-blur-md w-full sm:w-auto text-center"
             >
               Try Interactive Demo
             </a>
@@ -823,7 +824,7 @@ export default function Home() {
             <div className="flex flex-1 min-h-0 relative">
               
               {/* Mock Sidebar */}
-              <div className="w-16 md:w-64 border-r border-black/10 dark:border-white/5 flex flex-col min-h-0 bg-slate-50/80 dark:bg-black/10 shrink-0">
+              <div className="hidden sm:flex w-16 md:w-64 border-r border-black/10 dark:border-white/5 flex-col min-h-0 bg-slate-50/80 dark:bg-black/10 shrink-0">
                 <div className="p-2 md:p-4 space-y-4 shrink-0">
                   <div className="flex items-center justify-between">
                      <span className="text-[12px] font-black uppercase tracking-widest text-chat-text hidden md:block">Chatiq Conversations</span>
@@ -1025,7 +1026,7 @@ export default function Home() {
                     type="text"
                     value={mockInput}
                     onChange={(e) => setMockInput(e.target.value)}
-                    placeholder={`Type a mock message to ${activeMockChat.name}...`}
+                    placeholder="Type a message..."
                     className="flex-1 bg-slate-50 dark:bg-white/5 border border-black/10 dark:border-white/5 rounded-xl py-3 px-4 text-xs text-chat-text placeholder:text-chat-muted/60 focus:outline-none focus:border-chat-accent/50 focus:bg-white"
                   />
                   <button type="submit" className="p-2.5 rounded-xl bg-chat-accent text-white shadow-lg shadow-chat-accent/20 hover:opacity-90 active:scale-95 transition-all">
@@ -1408,11 +1409,11 @@ export default function Home() {
       {/* Footer */}
       <footer className="relative z-10 border-t border-black/10 bg-white/40 dark:bg-black/25 dark:border-white/5 py-12 px-6 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-6 text-sm text-chat-muted md:flex-row">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-nowrap whitespace-nowrap">
             <Logo size="sm" showText />
             <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-chat-muted border-l border-white/20 pl-3">v2.0 Premium</span>
           </div>
-          <p className="font-bold uppercase tracking-widest text-[9px]">© {new Date().getFullYear()} Chatiq. All rights reserved.</p>
+          <p className="font-bold uppercase tracking-wider md:tracking-widest text-[9px] text-center md:text-left">© {new Date().getFullYear()} Chatiq. All rights reserved.</p>
           <div className="flex gap-6 font-black uppercase text-[10px]">
              <Camera className="h-4 w-4 hover:text-chat-text cursor-pointer transition-colors" />
              <Send className="h-4 w-4 hover:text-chat-text cursor-pointer transition-colors" />

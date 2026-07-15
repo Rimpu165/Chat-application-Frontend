@@ -227,9 +227,7 @@ export default function ChatSidebar({ onSelectRoom, selectedRoomId }: ChatSideba
       selectedRoomId ? "hidden md:flex" : "flex"
     )}>
       <div className="p-5">
-        <div className="mb-7 flex items-center justify-between">
-           <Logo size="sm" showText />
-        </div>
+
 
         <div className="relative mb-5">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-chat-muted" />

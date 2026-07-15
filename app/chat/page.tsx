@@ -41,10 +41,24 @@ function ChatPageInner() {
     };
   }, [searchParams, token, loading]);
 
+  useEffect(() => {
+    if (selectedRoom) {
+      document.body.classList.add("chat-room-open");
+    } else {
+      document.body.classList.remove("chat-room-open");
+    }
+    return () => {
+      document.body.classList.remove("chat-room-open");
+    };
+  }, [selectedRoom]);
+
   if (loading || !user || !token) return null;
 
   return (
-    <div className="flex h-screen min-h-0 flex-col overflow-hidden bg-chat-bg font-sans text-chat-text pt-20 relative">
+    <div className={cn(
+      "flex h-screen min-h-0 flex-col overflow-hidden bg-chat-bg font-sans text-chat-text relative transition-all duration-300",
+      selectedRoom ? "pt-0 md:pt-20" : "pt-20"
+    )}>
       {/* Immersive Background */}
       <div className="absolute inset-0 animate-aura pointer-events-none opacity-40" />
 
@@ -65,7 +79,10 @@ function ChatPageInner() {
                 transition={{ duration: 0.25, ease: "easeOut" }}
                 className="flex min-h-0 flex-1 flex-col overflow-hidden"
               >
-                <ChatWindow room={selectedRoom} onClose={() => setSelectedRoom(null)} />
+                <ChatWindow room={selectedRoom} onClose={() => {
+                  setSelectedRoom(null);
+                  router.push("/chat");
+                }} />
               </motion.div>
             ) : (
               <motion.div

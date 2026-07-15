@@ -886,13 +886,13 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+        <div className="flex shrink-0 items-center gap-0.5 sm:gap-2">
           {!room.isGroup && (
             <>
-               <button title="Voice call" type="button" onClick={() => startCall(false)} disabled={isBlockedChat} className="rounded-xl bg-chat-raised/80 p-2.5 text-chat-muted transition-all hover:bg-chat-border/80 hover:text-chat-text disabled:cursor-not-allowed disabled:opacity-40">
+               <button title="Voice call" type="button" onClick={() => startCall(false)} disabled={isBlockedChat} className="rounded-xl bg-chat-raised/80 p-1.5 sm:p-2.5 text-chat-muted transition-all hover:bg-chat-border/80 hover:text-chat-text disabled:cursor-not-allowed disabled:opacity-40">
                   <Phone className="h-4 w-4" />
                </button>
-               <button title="Video call" type="button" onClick={() => startCall(true)} disabled={isBlockedChat} className="rounded-xl bg-chat-raised/80 p-2.5 text-chat-muted transition-all hover:bg-chat-border/80 hover:text-chat-text disabled:cursor-not-allowed disabled:opacity-40">
+               <button title="Video call" type="button" onClick={() => startCall(true)} disabled={isBlockedChat} className="rounded-xl bg-chat-raised/80 p-1.5 sm:p-2.5 text-chat-muted transition-all hover:bg-chat-border/80 hover:text-chat-text disabled:cursor-not-allowed disabled:opacity-40">
                   <Video className="h-4 w-4" />
                </button>
             </>
@@ -907,7 +907,7 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
               });
             }}
             className={cn(
-              "rounded-xl p-2.5 transition-all",
+              "rounded-xl p-1.5 sm:p-2.5 transition-all",
               showPinnedDrawer
                 ? "bg-chat-accent/20 text-chat-accent"
                 : "bg-chat-raised/80 text-chat-muted hover:bg-chat-border/80 hover:text-chat-text"
@@ -923,7 +923,7 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
               setSearchQuery("");
             }}
             className={cn(
-              "rounded-xl p-2.5 transition-all",
+              "rounded-xl p-1.5 sm:p-2.5 transition-all",
               showSearchBar
                 ? "bg-chat-accent/20 text-chat-accent"
                 : "bg-chat-raised/80 text-chat-muted hover:bg-chat-border/80 hover:text-chat-text"
@@ -935,7 +935,7 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
             title="More"
             type="button"
             onClick={() => setShowMenu((v) => !v)}
-            className="rounded-xl bg-chat-raised/80 p-2.5 text-chat-muted transition-all hover:bg-chat-border/80 hover:text-chat-text"
+            className="rounded-xl bg-chat-raised/80 p-1.5 sm:p-2.5 text-chat-muted transition-all hover:bg-chat-border/80 hover:text-chat-text"
           >
               <MoreVertical className="h-4 w-4" />
            </button>
@@ -1379,7 +1379,7 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
       </div>
 
       {/* Input area */}
-      <footer className="relative z-10 shrink-0 border-t border-chat-border/60 bg-linear-to-t from-chat-bg via-chat-bg to-transparent p-4 pb-16 sm:p-6 md:pb-6">
+      <footer className="relative z-10 shrink-0 border-t border-chat-border/60 bg-linear-to-t from-chat-bg via-chat-bg to-transparent p-4 pb-4 sm:p-6 md:pb-6">
         {!sendStatus.canSend ? (
           <div className="mx-auto max-w-4xl rounded-2xl border border-chat-border bg-chat-surface/90 p-4 text-center backdrop-blur-md">
             <p className="mb-3 text-sm font-medium text-chat-muted">
@@ -1411,7 +1411,7 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
                 <button title="Cancel reply" type="button" onClick={() => setReplyTo(null)}><X className="h-3 w-3 shrink-0" /></button>
               </div>
             )}
-            <div className="flex flex-1 items-center gap-2 rounded-2xl border border-chat-border bg-chat-surface px-3 py-2 backdrop-blur-xl transition-all focus-within:border-chat-accent/50 focus-within:ring-2 focus-within:ring-chat-accent/20 sm:px-4">
+            <div className="flex flex-1 min-w-0 items-center gap-2 rounded-2xl border border-chat-border bg-chat-surface px-3 py-2 backdrop-blur-xl transition-all focus-within:border-chat-accent/50 focus-within:ring-2 focus-within:ring-chat-accent/20 sm:px-4">
               <input 
                 type="text" 
                 placeholder="Message…"
