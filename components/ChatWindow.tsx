@@ -252,6 +252,13 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
         });
       };
 
+      const handleIceCandidate = async (candidate: RTCIceCandidateInit) => {
+        try {
+          if (!peerRef.current || peerRef.current.signalingState === "closed") return;
+          await peerRef.current.addIceCandidate(new RTCIceCandidate(candidate));
+        } catch {}
+      };
+
       socket.on("receiveMessage", handleNewMessage);
       socket.on("userTyping", handleTyping);
       socket.on("userStoppedTyping", handleStopTyping);
@@ -262,6 +269,7 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
       socket.on("callEnded", handleCallEnded);
       socket.on("chatCleared", handleChatCleared);
       socket.on("messagePinToggled", handlePinToggled);
+      socket.on("iceCandidate", handleIceCandidate);
       const handleMessagesSeen = ({
         roomId,
         byUser,
@@ -304,6 +312,7 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
         socket.off("messagesSeen", handleMessagesSeen);
         socket.off("messageVanished", handleMessageVanished);
         socket.off("messagePinToggled", handlePinToggled);
+        socket.off("iceCandidate", handleIceCandidate);
       };
     }
   }, [room._id, socket, otherParticipant?._id, user?._id]);
@@ -529,7 +538,27 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
       localStreamRef.current = stream;
       if (localVideoRef.current) localVideoRef.current.srcObject = stream;
 
-      const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
+      const pc = new RTCPeerConnection({
+        iceServers: [
+          { urls: "stun:stun.l.google.com:19302" },
+          { urls: "stun:stun1.l.google.com:19302" },
+          {
+            urls: "turn:openrelay.metered.ca:80",
+            username: "openrelayproject",
+            credential: "openrelayproject",
+          },
+          {
+            urls: "turn:openrelay.metered.ca:443",
+            username: "openrelayproject",
+            credential: "openrelayproject",
+          },
+          {
+            urls: "turn:openrelay.metered.ca:443?transport=tcp",
+            username: "openrelayproject",
+            credential: "openrelayproject",
+          },
+        ],
+      });
       peerRef.current = pc;
       stream.getTracks().forEach((track) => pc.addTrack(track, stream));
 
@@ -560,14 +589,9 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
           // Ignore late/duplicate callAccepted packets after call teardown.
         }
       });
-      socket.on("iceCandidate", async (candidate) => {
-        try {
-          if (!peerRef.current || pc.signalingState === "closed") return;
-          await pc.addIceCandidate(new RTCIceCandidate(candidate));
-        } catch {}
-      });
 
       const offer = await pc.createOffer();
+
       await pc.setLocalDescription(offer);
       socket.emit("callUser", {
         userToCall: otherParticipant._id,
@@ -591,7 +615,27 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: incomingCall.isVideo });
       localStreamRef.current = stream;
       if (localVideoRef.current) localVideoRef.current.srcObject = stream;
-      const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
+      const pc = new RTCPeerConnection({
+        iceServers: [
+          { urls: "stun:stun.l.google.com:19302" },
+          { urls: "stun:stun1.l.google.com:19302" },
+          {
+            urls: "turn:openrelay.metered.ca:80",
+            username: "openrelayproject",
+            credential: "openrelayproject",
+          },
+          {
+            urls: "turn:openrelay.metered.ca:443",
+            username: "openrelayproject",
+            credential: "openrelayproject",
+          },
+          {
+            urls: "turn:openrelay.metered.ca:443?transport=tcp",
+            username: "openrelayproject",
+            credential: "openrelayproject",
+          },
+        ],
+      });
       peerRef.current = pc;
       stream.getTracks().forEach((track) => pc.addTrack(track, stream));
       pc.ontrack = (event) => {
@@ -601,12 +645,6 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
       pc.onicecandidate = (event) => {
         if (event.candidate) socket.emit("iceCandidate", { to: incomingCall.from, candidate: event.candidate });
       };
-      socket.on("iceCandidate", async (candidate) => {
-        try {
-          if (!peerRef.current || pc.signalingState === "closed") return;
-          await pc.addIceCandidate(new RTCIceCandidate(candidate));
-        } catch {}
-      });
       await pc.setRemoteDescription(new RTCSessionDescription(incomingCall.signal));
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
