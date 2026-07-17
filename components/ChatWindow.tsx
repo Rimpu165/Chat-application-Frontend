@@ -107,6 +107,7 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
   const [incomingCall, setIncomingCall] = useState<any>(null);
   const [callActive, setCallActive] = useState(false);
   const [activeCallIsVideo, setActiveCallIsVideo] = useState(false);
+  const [remoteHasStream, setRemoteHasStream] = useState(false);
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const peerRef = useRef<RTCPeerConnection | null>(null);
@@ -563,8 +564,12 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
       stream.getTracks().forEach((track) => pc.addTrack(track, stream));
 
       pc.ontrack = (event) => {
-        remoteStreamRef.current = event.streams[0];
-        if (remoteVideoRef.current) remoteVideoRef.current.srcObject = event.streams[0];
+        const remoteStream = event.streams[0];
+        remoteStreamRef.current = remoteStream;
+        if (remoteVideoRef.current) {
+          remoteVideoRef.current.srcObject = remoteStream;
+        }
+        setRemoteHasStream(true);
       };
       pc.onicecandidate = (event) => {
         if (event.candidate) socket.emit("iceCandidate", { to: otherParticipant._id, candidate: event.candidate });
@@ -639,8 +644,12 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
       peerRef.current = pc;
       stream.getTracks().forEach((track) => pc.addTrack(track, stream));
       pc.ontrack = (event) => {
-        remoteStreamRef.current = event.streams[0];
-        if (remoteVideoRef.current) remoteVideoRef.current.srcObject = event.streams[0];
+        const remoteStream = event.streams[0];
+        remoteStreamRef.current = remoteStream;
+        if (remoteVideoRef.current) {
+          remoteVideoRef.current.srcObject = remoteStream;
+        }
+        setRemoteHasStream(true);
       };
       pc.onicecandidate = (event) => {
         if (event.candidate) socket.emit("iceCandidate", { to: incomingCall.from, candidate: event.candidate });
@@ -686,6 +695,7 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
     localStreamRef.current?.getTracks().forEach((t) => t.stop());
     localStreamRef.current = null;
     remoteStreamRef.current = null;
+    setRemoteHasStream(false);
     setIncomingCall(null);
     setCallActive(false);
     setActiveCallIsVideo(false);
@@ -749,17 +759,20 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
   // Sync WebRTC video streams with video elements once they are mounted in DOM
   useEffect(() => {
     if (callActive) {
-      const timer = setInterval(() => {
-        if (localVideoRef.current && localStreamRef.current && !localVideoRef.current.srcObject) {
+      const sync = () => {
+        if (localVideoRef.current && localStreamRef.current && localVideoRef.current.srcObject !== localStreamRef.current) {
           localVideoRef.current.srcObject = localStreamRef.current;
         }
-        if (remoteVideoRef.current && remoteStreamRef.current && !remoteVideoRef.current.srcObject) {
+        if (remoteVideoRef.current && remoteStreamRef.current && remoteVideoRef.current.srcObject !== remoteStreamRef.current) {
           remoteVideoRef.current.srcObject = remoteStreamRef.current;
+          setRemoteHasStream(true);
         }
-      }, 100);
+      };
+      sync();
+      const timer = setInterval(sync, 200);
       return () => clearInterval(timer);
     }
-  }, [callActive]);
+  }, [callActive, remoteHasStream]);
 
   useEffect(() => {
     setShowCallHistory(false);
@@ -1583,26 +1596,96 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
       </footer>
 
       {(incomingCall || callActive) && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-chat-bg/90 p-6 backdrop-blur-sm">
-          <div className="w-full max-w-3xl rounded-2xl border border-chat-border bg-chat-surface p-4 text-chat-text">
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md" style={{padding: '12px'}}>
+          <div className="w-full rounded-2xl border border-chat-border bg-chat-surface text-chat-text overflow-hidden" style={{maxWidth: '600px', maxHeight: '90vh', display: 'flex', flexDirection: 'column'}}>
             {incomingCall && !callActive ? (
-              <div className="space-y-4 text-center">
+              <div className="space-y-4 text-center" style={{padding: '24px'}}>
+                <div style={{width: '64px', height: '64px', borderRadius: '50%', background: 'var(--chat-accent, #6366f1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto'}}>
+                  <PhoneCall style={{width: '28px', height: '28px', color: 'white'}} />
+                </div>
                 <p className="text-lg font-semibold">{incomingCall.name} is calling…</p>
                 <div className="flex justify-center gap-3">
-                  <button title="Accept call" type="button" onClick={acceptIncomingCall} className="rounded-xl bg-chat-accent px-4 py-2 font-medium text-chat-bg">Accept</button>
-                  <button title="Reject call" type="button" onClick={rejectIncomingCall} className="rounded-xl bg-chat-raised px-4 py-2 font-medium">Reject</button>
+                  <button title="Accept call" type="button" onClick={acceptIncomingCall} className="rounded-xl bg-chat-accent px-5 py-2.5 font-medium text-chat-bg">Accept</button>
+                  <button title="Reject call" type="button" onClick={rejectIncomingCall} className="rounded-xl bg-red-600 px-5 py-2.5 font-medium text-white">Reject</button>
                 </div>
               </div>
             ) : (
-              <div>
-                <div className="mb-3 text-center text-sm font-medium text-chat-muted">
-                  Call duration: <span className="font-semibold text-chat-text">{liveCallDurationLabel}</span>
+              <div style={{display: 'flex', flexDirection: 'column', height: '100%'}}>
+                {/* Header - Call duration */}
+                <div style={{padding: '10px 16px', textAlign: 'center', borderBottom: '1px solid var(--chat-border)', flexShrink: 0}}>
+                  <span style={{fontSize: '13px', color: 'var(--chat-muted)'}}>
+                    Call duration: <span style={{fontWeight: 600, color: 'var(--chat-text)'}}>{liveCallDurationLabel}</span>
+                  </span>
                 </div>
-                <div className="grid gap-3 md:grid-cols-2">
-                  <video ref={localVideoRef} autoPlay muted playsInline className="h-52 w-full rounded-xl bg-black object-cover" />
-                  <video ref={remoteVideoRef} autoPlay playsInline className="h-52 w-full rounded-xl bg-black object-cover" />
+
+                {/* Video area */}
+                {activeCallIsVideo ? (
+                  <div style={{flex: 1, display: 'flex', flexDirection: 'column', gap: '8px', padding: '10px', overflow: 'hidden', minHeight: 0}}>
+                    {/* Remote video - main large video */}
+                    <div style={{flex: 1, position: 'relative', borderRadius: '12px', overflow: 'hidden', background: '#000', minHeight: '160px'}}>
+                      <video
+                        ref={remoteVideoRef}
+                        autoPlay
+                        playsInline
+                        style={{width: '100%', height: '100%', objectFit: 'cover', display: 'block'}}
+                      />
+                      {!remoteHasStream && (
+                        <div style={{position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.6)', fontSize: '13px', gap: '8px'}}>
+                          <div style={{width: '40px', height: '40px', border: '3px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', animation: 'spin 1s linear infinite'}} />
+                          Connecting…
+                        </div>
+                      )}
+                      <div style={{position: 'absolute', bottom: '8px', left: '10px', fontSize: '11px', color: 'rgba(255,255,255,0.7)', background: 'rgba(0,0,0,0.4)', padding: '2px 8px', borderRadius: '20px'}}>
+                        {otherParticipant?.name || 'Remote'}
+                      </div>
+                    </div>
+
+                    {/* Local video - small PiP */}
+                    <div style={{height: '110px', flexShrink: 0, borderRadius: '10px', overflow: 'hidden', background: '#111', position: 'relative'}}>
+                      <video
+                        ref={localVideoRef}
+                        autoPlay
+                        muted
+                        playsInline
+                        style={{width: '100%', height: '100%', objectFit: 'cover', display: 'block'}}
+                      />
+                      <div style={{position: 'absolute', bottom: '6px', left: '8px', fontSize: '11px', color: 'rgba(255,255,255,0.7)', background: 'rgba(0,0,0,0.4)', padding: '2px 8px', borderRadius: '20px'}}>
+                        You
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  /* Audio call - show avatar */
+                  <div style={{flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px', padding: '24px'}}>
+                    <div style={{width: '80px', height: '80px', borderRadius: '50%', background: 'var(--chat-raised)', overflow: 'hidden', border: '3px solid var(--chat-accent)'}}>
+                      {otherParticipant?.profilePhoto ? (
+                        <img src={resolveMediaUrl(otherParticipant.profilePhoto)} alt="" style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+                      ) : (
+                        <div style={{width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px'}}>
+                          {otherParticipant?.name?.[0]?.toUpperCase() || '?'}
+                        </div>
+                      )}
+                    </div>
+                    <p style={{fontWeight: 600, fontSize: '16px'}}>{otherParticipant?.name}</p>
+                    <p style={{fontSize: '13px', color: 'var(--chat-muted)'}}>Audio call in progress…</p>
+                    {/* Hidden audio-only elements */}
+                    <video ref={localVideoRef} autoPlay muted playsInline style={{display: 'none'}} />
+                    <video ref={remoteVideoRef} autoPlay playsInline style={{display: 'none'}} />
+                  </div>
+                )}
+
+                {/* End call button */}
+                <div style={{padding: '12px 16px', flexShrink: 0, borderTop: '1px solid var(--chat-border)', display: 'flex', justifyContent: 'center'}}>
+                  <button
+                    title="End call"
+                    type="button"
+                    onClick={() => endCall()}
+                    style={{background: '#dc2626', color: 'white', border: 'none', borderRadius: '50px', padding: '10px 32px', fontWeight: 600, fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px'}}
+                  >
+                    <Phone style={{width: '16px', height: '16px', transform: 'rotate(135deg)'}} />
+                    End call
+                  </button>
                 </div>
-                <button title="End call" type="button" onClick={() => endCall()} className="mt-4 rounded-xl bg-red-600 px-4 py-2 font-medium text-white">End call</button>
               </div>
             )}
           </div>
