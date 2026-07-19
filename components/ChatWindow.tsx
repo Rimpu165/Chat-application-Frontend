@@ -544,6 +544,68 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
     }
   };
 
+  const ICE_SERVERS: RTCIceServer[] = [
+    // Google STUN (multiple)
+    { urls: "stun:stun.l.google.com:19302" },
+    { urls: "stun:stun1.l.google.com:19302" },
+    { urls: "stun:stun2.l.google.com:19302" },
+    { urls: "stun:stun3.l.google.com:19302" },
+    { urls: "stun:stun4.l.google.com:19302" },
+    // Cloudflare STUN
+    { urls: "stun:stun.cloudflare.com:3478" },
+    // metered.ca staticauth TURN — most reliable free option
+    {
+      urls: "turn:staticauth.openrelay.metered.ca:80",
+      username: "openrelayproject",
+      credential: "openrelayproject",
+    },
+    {
+      urls: "turn:staticauth.openrelay.metered.ca:80?transport=tcp",
+      username: "openrelayproject",
+      credential: "openrelayproject",
+    },
+    {
+      urls: "turn:staticauth.openrelay.metered.ca:443",
+      username: "openrelayproject",
+      credential: "openrelayproject",
+    },
+    {
+      urls: "turns:staticauth.openrelay.metered.ca:443?transport=tcp",
+      username: "openrelayproject",
+      credential: "openrelayproject",
+    },
+    // freestun TURN
+    {
+      urls: "turn:freestun.net:3479",
+      username: "free",
+      credential: "free",
+    },
+    {
+      urls: "turns:freestun.net:5350",
+      username: "free",
+      credential: "free",
+    },
+    // Xirsys public fallback
+    {
+      urls: "stun:relay.metered.ca:80",
+    },
+    {
+      urls: "turn:relay.metered.ca:80",
+      username: "e499486ca9b7c5a2a14ab985",
+      credential: "8KaR1YLdVbDjO2KN",
+    },
+    {
+      urls: "turn:relay.metered.ca:443",
+      username: "e499486ca9b7c5a2a14ab985",
+      credential: "8KaR1YLdVbDjO2KN",
+    },
+    {
+      urls: "turns:relay.metered.ca:443?transport=tcp",
+      username: "e499486ca9b7c5a2a14ab985",
+      credential: "8KaR1YLdVbDjO2KN",
+    },
+  ];
+
   const startCall = async (isVideo: boolean) => {
     if (!socket || !otherParticipant?._id || !user) return;
     try {
@@ -551,38 +613,34 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
       localStreamRef.current = stream;
       if (localVideoRef.current) localVideoRef.current.srcObject = stream;
 
-      const pc = new RTCPeerConnection({
-        iceServers: [
-          { urls: "stun:stun.l.google.com:19302" },
-          { urls: "stun:stun1.l.google.com:19302" },
-          {
-            urls: "turn:openrelay.metered.ca:80",
-            username: "openrelayproject",
-            credential: "openrelayproject",
-          },
-          {
-            urls: "turn:openrelay.metered.ca:443",
-            username: "openrelayproject",
-            credential: "openrelayproject",
-          },
-          {
-            urls: "turn:openrelay.metered.ca:443?transport=tcp",
-            username: "openrelayproject",
-            credential: "openrelayproject",
-          },
-        ],
-      });
+      const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
       peerRef.current = pc;
       stream.getTracks().forEach((track) => pc.addTrack(track, stream));
 
       pc.ontrack = (event) => {
-        const remoteStream = event.streams[0];
+        const remoteStream = event.streams[0] || new MediaStream(event.track ? [event.track] : []);
         remoteStreamRef.current = remoteStream;
         if (remoteVideoRef.current) {
           remoteVideoRef.current.srcObject = remoteStream;
         }
         setRemoteHasStream(true);
       };
+
+      pc.onconnectionstatechange = () => {
+        console.log("[Caller] connection state:", pc.connectionState);
+        if (pc.connectionState === "connected") {
+          // Force re-sync streams in case ontrack fired before DOM was ready
+          if (remoteStreamRef.current && remoteVideoRef.current) {
+            remoteVideoRef.current.srcObject = remoteStreamRef.current;
+            setRemoteHasStream(true);
+          }
+        }
+        if (pc.connectionState === "failed") {
+          toast.error("Connection failed. Try again.");
+          endCall(true);
+        }
+      };
+
       pc.onicecandidate = (event) => {
         if (event.candidate) socket.emit("iceCandidate", { to: otherParticipant._id, candidate: event.candidate });
       };
@@ -632,37 +690,33 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: incomingCall.isVideo });
       localStreamRef.current = stream;
       if (localVideoRef.current) localVideoRef.current.srcObject = stream;
-      const pc = new RTCPeerConnection({
-        iceServers: [
-          { urls: "stun:stun.l.google.com:19302" },
-          { urls: "stun:stun1.l.google.com:19302" },
-          {
-            urls: "turn:openrelay.metered.ca:80",
-            username: "openrelayproject",
-            credential: "openrelayproject",
-          },
-          {
-            urls: "turn:openrelay.metered.ca:443",
-            username: "openrelayproject",
-            credential: "openrelayproject",
-          },
-          {
-            urls: "turn:openrelay.metered.ca:443?transport=tcp",
-            username: "openrelayproject",
-            credential: "openrelayproject",
-          },
-        ],
-      });
+      const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
       peerRef.current = pc;
       stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+
       pc.ontrack = (event) => {
-        const remoteStream = event.streams[0];
+        const remoteStream = event.streams[0] || new MediaStream(event.track ? [event.track] : []);
         remoteStreamRef.current = remoteStream;
         if (remoteVideoRef.current) {
           remoteVideoRef.current.srcObject = remoteStream;
         }
         setRemoteHasStream(true);
       };
+
+      pc.onconnectionstatechange = () => {
+        console.log("[Callee] connection state:", pc.connectionState);
+        if (pc.connectionState === "connected") {
+          if (remoteStreamRef.current && remoteVideoRef.current) {
+            remoteVideoRef.current.srcObject = remoteStreamRef.current;
+            setRemoteHasStream(true);
+          }
+        }
+        if (pc.connectionState === "failed") {
+          toast.error("Connection failed. Try again.");
+          endCall(true);
+        }
+      };
+
       pc.onicecandidate = (event) => {
         if (event.candidate) socket.emit("iceCandidate", { to: incomingCall.from, candidate: event.candidate });
       };
