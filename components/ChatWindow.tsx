@@ -87,7 +87,7 @@ function VanishTimer({ message }: { message: any }) {
 
 export default function ChatWindow({ room, onClose }: ChatWindowProps) {
   const { user } = useAuth();
-  const { socket, onlineUsers } = useSocket();
+  const { socket, onlineUsers, globalIncomingCall, clearGlobalIncomingCall } = useSocket();
   const router = useRouter();
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState("");
@@ -223,7 +223,12 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
       const handleReaction = ({ messageId, reactions }: any) => {
         setMessages((prev) => prev.map((m) => (m._id === messageId ? { ...m, reactions } : m)));
       };
-      const handleIncomingCall = (data: any) => setIncomingCall(data);
+      const handleIncomingCall = (data: any) => {
+        // Only handle if this call is from the other participant in THIS room
+        if (data.from === otherParticipant?._id) {
+          setIncomingCall(data);
+        }
+      };
       const handleCallEnded = () => {
         endCall(false);
         setCallEndedMessage("Call ended");
@@ -731,6 +736,7 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
       setCallStartedAtMs(answeredAt);
       setCallDurationSec(0);
       setIncomingCall(null);
+      clearGlobalIncomingCall();
       setCallActive(true);
     } catch {
       toast.error("Unable to accept call");
@@ -763,6 +769,7 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
     remoteStreamRef.current = null;
     setRemoteHasStream(false);
     setIncomingCall(null);
+    clearGlobalIncomingCall();
     setCallActive(false);
     setActiveCallIsVideo(false);
     setActiveCallDirection("outgoing");
@@ -777,6 +784,7 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
     }
     void logCallEvent("rejected", Boolean(incomingCall?.isVideo), "incoming");
     setIncomingCall(null);
+    clearGlobalIncomingCall();
     void fetchCallHistory();
   };
 

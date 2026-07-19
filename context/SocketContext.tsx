@@ -4,9 +4,18 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { io, Socket } from "socket.io-client";
 import { useAuth } from "./AuthContext";
 
+export interface IncomingCallData {
+  signal: RTCSessionDescriptionInit;
+  from: string;
+  name: string;
+  isVideo: boolean;
+}
+
 interface SocketContextType {
   socket: Socket | null;
   onlineUsers: string[];
+  globalIncomingCall: IncomingCallData | null;
+  clearGlobalIncomingCall: () => void;
 }
 
 const SocketContext = createContext<SocketContextType | undefined>(undefined);
@@ -14,6 +23,7 @@ const SocketContext = createContext<SocketContextType | undefined>(undefined);
 export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
+  const [globalIncomingCall, setGlobalIncomingCall] = useState<IncomingCallData | null>(null);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -28,6 +38,16 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         setOnlineUsers(users);
       });
 
+      // Global incoming call listener — works from ANY page
+      socketInstance.on("incomingCall", (data: IncomingCallData) => {
+        setGlobalIncomingCall(data);
+      });
+
+      // Auto-clear if caller ends before answer
+      socketInstance.on("callEnded", () => {
+        setGlobalIncomingCall(null);
+      });
+
       return () => {
         socketInstance.close();
         setSocket(null);
@@ -40,8 +60,10 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, [user?._id]);
 
+  const clearGlobalIncomingCall = () => setGlobalIncomingCall(null);
+
   return (
-    <SocketContext.Provider value={{ socket, onlineUsers }}>
+    <SocketContext.Provider value={{ socket, onlineUsers, globalIncomingCall, clearGlobalIncomingCall }}>
       {children}
     </SocketContext.Provider>
   );

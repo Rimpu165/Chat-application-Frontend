@@ -14,6 +14,7 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
 import API from "@/lib/api";
+import GlobalIncomingCallBanner from "./GlobalIncomingCallBanner";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -68,6 +69,9 @@ export default function Navbar() {
 
   return (
     <>
+    {/* Global incoming call notification — visible on ALL pages */}
+    <GlobalIncomingCallBanner />
+
     {/* Desktop/Tablet Floating Navigation Hub */}
     <nav className={cn(
       "global-top-nav fixed top-0 inset-x-0 z-[60] px-6 py-5 transition-all duration-500",
