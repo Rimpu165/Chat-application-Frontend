@@ -275,6 +275,34 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
         } catch {}
       };
 
+      // callAccepted MUST be in the main useEffect — not inside startCall() —
+      // so it always has a fresh reference and is properly cleaned up.
+      const handleCallAccepted = async (payload: any) => {
+        try {
+          const pc = peerRef.current;
+          if (!pc || pc.signalingState === "closed") {
+            console.warn("[callAccepted] pc missing or closed, signalingState:", pc?.signalingState);
+            return;
+          }
+          const signal =
+            payload && typeof payload === "object" && "signal" in payload
+              ? payload.signal
+              : (payload as RTCSessionDescriptionInit);
+          const answeredAt =
+            payload && typeof payload === "object" && "answeredAt" in payload
+              ? Number(payload.answeredAt || 0)
+              : 0;
+          console.log("[callAccepted] applying remote description, signalingState:", pc.signalingState);
+          await pc.setRemoteDescription(new RTCSessionDescription(signal));
+          console.log("[callAccepted] remote description set successfully");
+          setCallStartedAtMs(answeredAt || Date.now());
+          setCallDurationSec(0);
+          setCallActive(true);
+        } catch (err) {
+          console.error("[callAccepted] error:", err);
+        }
+      };
+
       socket.on("receiveMessage", handleNewMessage);
       socket.on("userTyping", handleTyping);
       socket.on("userStoppedTyping", handleStopTyping);
@@ -282,6 +310,7 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
       socket.on("messageDeleted", handleDeleted);
       socket.on("messageReaction", handleReaction);
       socket.on("incomingCall", handleIncomingCall);
+      socket.on("callAccepted", handleCallAccepted);
       socket.on("callEnded", handleCallEnded);
       socket.on("callRejected", handleCallRejected);
       socket.on("chatCleared", handleChatCleared);
@@ -324,6 +353,7 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
         socket.off("messageDeleted", handleDeleted);
         socket.off("messageReaction", handleReaction);
         socket.off("incomingCall", handleIncomingCall);
+        socket.off("callAccepted", handleCallAccepted);
         socket.off("callEnded", handleCallEnded);
         socket.off("callRejected", handleCallRejected);
         socket.off("chatCleared", handleChatCleared);
@@ -650,25 +680,8 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
         if (event.candidate) socket.emit("iceCandidate", { to: otherParticipant._id, candidate: event.candidate });
       };
 
-      socket.on("callAccepted", async (payload: RTCSessionDescriptionInit | { signal: RTCSessionDescriptionInit; answeredAt?: number }) => {
-        try {
-          if (!peerRef.current || pc.signalingState === "closed") return;
-          const signal =
-            payload && typeof payload === "object" && "signal" in payload
-              ? payload.signal
-              : (payload as RTCSessionDescriptionInit);
-          const answeredAt =
-            payload && typeof payload === "object" && "answeredAt" in payload
-              ? Number(payload.answeredAt || 0)
-              : 0;
-          await pc.setRemoteDescription(new RTCSessionDescription(signal));
-          setCallStartedAtMs(answeredAt || Date.now());
-          setCallDurationSec(0);
-          setCallActive(true);
-        } catch {
-          // Ignore late/duplicate callAccepted packets after call teardown.
-        }
-      });
+      // NOTE: callAccepted is now handled in the main useEffect (not here)
+      // to avoid stale closure issues.
 
       const offer = await pc.createOffer();
 
