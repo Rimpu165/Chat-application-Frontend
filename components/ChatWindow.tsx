@@ -108,6 +108,7 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
   const [callActive, setCallActive] = useState(false);
   const [activeCallIsVideo, setActiveCallIsVideo] = useState(false);
   const [remoteHasStream, setRemoteHasStream] = useState(false);
+  const [callEndedMessage, setCallEndedMessage] = useState<string | null>(null);
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const peerRef = useRef<RTCPeerConnection | null>(null);
@@ -223,7 +224,16 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
         setMessages((prev) => prev.map((m) => (m._id === messageId ? { ...m, reactions } : m)));
       };
       const handleIncomingCall = (data: any) => setIncomingCall(data);
-      const handleCallEnded = () => endCall(false);
+      const handleCallEnded = () => {
+        endCall(false);
+        setCallEndedMessage("Call ended");
+        setTimeout(() => setCallEndedMessage(null), 3000);
+      };
+      const handleCallRejected = () => {
+        endCall(false);
+        setCallEndedMessage("Call was rejected");
+        setTimeout(() => setCallEndedMessage(null), 3000);
+      };
       const handleChatCleared = ({ roomId }: { roomId: string }) => {
         if (String(roomId) === String(room._id)) {
           setMessages([]);
@@ -268,6 +278,7 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
       socket.on("messageReaction", handleReaction);
       socket.on("incomingCall", handleIncomingCall);
       socket.on("callEnded", handleCallEnded);
+      socket.on("callRejected", handleCallRejected);
       socket.on("chatCleared", handleChatCleared);
       socket.on("messagePinToggled", handlePinToggled);
       socket.on("iceCandidate", handleIceCandidate);
@@ -309,6 +320,7 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
         socket.off("messageReaction", handleReaction);
         socket.off("incomingCall", handleIncomingCall);
         socket.off("callEnded", handleCallEnded);
+        socket.off("callRejected", handleCallRejected);
         socket.off("chatCleared", handleChatCleared);
         socket.off("messagesSeen", handleMessagesSeen);
         socket.off("messageVanished", handleMessageVanished);
@@ -706,6 +718,9 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
   };
 
   const rejectIncomingCall = () => {
+    if (socket && incomingCall?.from) {
+      socket.emit("rejectCall", { to: incomingCall.from });
+    }
     void logCallEvent("rejected", Boolean(incomingCall?.isVideo), "incoming");
     setIncomingCall(null);
     void fetchCallHistory();
@@ -1595,53 +1610,104 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
         )}
       </footer>
 
+      {/* Call Ended Toast */}
+      {callEndedMessage && (
+        <div style={{
+          position: 'absolute', top: '24px', left: '50%', transform: 'translateX(-50%)',
+          zIndex: 60, background: 'rgba(0,0,0,0.82)', color: 'white',
+          borderRadius: '50px', padding: '10px 24px', fontSize: '13px', fontWeight: 600,
+          backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.12)',
+          display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap'
+        }}>
+          <Phone style={{width: '14px', height: '14px', transform: 'rotate(135deg)', color: '#f87171'}} />
+          {callEndedMessage}
+        </div>
+      )}
+
       {(incomingCall || callActive) && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md" style={{padding: '12px'}}>
-          <div className="w-full rounded-2xl border border-chat-border bg-chat-surface text-chat-text overflow-hidden" style={{maxWidth: '600px', maxHeight: '90vh', display: 'flex', flexDirection: 'column'}}>
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md">
+          <div style={{
+            width: '100%', maxWidth: '520px', maxHeight: '88vh',
+            borderRadius: '20px', overflow: 'hidden',
+            background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.08)',
+            display: 'flex', flexDirection: 'column', boxShadow: '0 32px 80px rgba(0,0,0,0.7)'
+          }}>
             {incomingCall && !callActive ? (
-              <div className="space-y-4 text-center" style={{padding: '24px'}}>
-                <div style={{width: '64px', height: '64px', borderRadius: '50%', background: 'var(--chat-accent, #6366f1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto'}}>
-                  <PhoneCall style={{width: '28px', height: '28px', color: 'white'}} />
+              /* Incoming call UI */
+              <div style={{padding: '40px 24px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', background: 'linear-gradient(135deg, #0f0f1a 0%, #1a0a2e 100%)'}}>
+                <div style={{
+                  width: '90px', height: '90px', borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: '0 0 0 16px rgba(99,102,241,0.12), 0 0 0 32px rgba(99,102,241,0.06)', margin: '0 auto'
+                }}>
+                  {otherAvatarUrl ? (
+                    <img src={otherAvatarUrl} alt="" style={{width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover'}} />
+                  ) : (
+                    <PhoneCall style={{width: '36px', height: '36px', color: 'white'}} />
+                  )}
                 </div>
-                <p className="text-lg font-semibold">{incomingCall.name} is calling…</p>
-                <div className="flex justify-center gap-3">
-                  <button title="Accept call" type="button" onClick={acceptIncomingCall} className="rounded-xl bg-chat-accent px-5 py-2.5 font-medium text-chat-bg">Accept</button>
-                  <button title="Reject call" type="button" onClick={rejectIncomingCall} className="rounded-xl bg-red-600 px-5 py-2.5 font-medium text-white">Reject</button>
+                <div>
+                  <p style={{fontSize: '22px', fontWeight: 700, color: 'white', margin: 0}}>{incomingCall.name}</p>
+                  <p style={{fontSize: '13px', color: 'rgba(255,255,255,0.5)', marginTop: '4px'}}>
+                    {incomingCall.isVideo ? '📹 Incoming video call' : '📞 Incoming voice call'}
+                  </p>
+                </div>
+                <div style={{display: 'flex', gap: '24px', marginTop: '8px'}}>
+                  <button title="Reject call" type="button" onClick={rejectIncomingCall}
+                    style={{width: '64px', height: '64px', borderRadius: '50%', background: '#dc2626', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 24px rgba(220,38,38,0.4)'}}>
+                    <Phone style={{width: '24px', height: '24px', color: 'white', transform: 'rotate(135deg)'}} />
+                  </button>
+                  <button title="Accept call" type="button" onClick={acceptIncomingCall}
+                    style={{width: '64px', height: '64px', borderRadius: '50%', background: '#16a34a', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 24px rgba(22,163,74,0.4)'}}>
+                    <Phone style={{width: '24px', height: '24px', color: 'white'}} />
+                  </button>
                 </div>
               </div>
             ) : (
-              <div style={{display: 'flex', flexDirection: 'column', height: '100%'}}>
-                {/* Header - Call duration */}
-                <div style={{padding: '10px 16px', textAlign: 'center', borderBottom: '1px solid var(--chat-border)', flexShrink: 0}}>
-                  <span style={{fontSize: '13px', color: 'var(--chat-muted)'}}>
-                    Call duration: <span style={{fontWeight: 600, color: 'var(--chat-text)'}}>{liveCallDurationLabel}</span>
-                  </span>
-                </div>
+              /* Active call UI */
+              <div style={{display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0}}>
 
-                {/* Video area */}
                 {activeCallIsVideo ? (
-                  <div style={{flex: 1, display: 'flex', flexDirection: 'column', gap: '8px', padding: '10px', overflow: 'hidden', minHeight: 0}}>
-                    {/* Remote video - main large video */}
-                    <div style={{flex: 1, position: 'relative', borderRadius: '12px', overflow: 'hidden', background: '#000', minHeight: '160px'}}>
-                      <video
-                        ref={remoteVideoRef}
-                        autoPlay
-                        playsInline
-                        style={{width: '100%', height: '100%', objectFit: 'cover', display: 'block'}}
-                      />
-                      {!remoteHasStream && (
-                        <div style={{position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.6)', fontSize: '13px', gap: '8px'}}>
-                          <div style={{width: '40px', height: '40px', border: '3px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', animation: 'spin 1s linear infinite'}} />
-                          Connecting…
-                        </div>
-                      )}
-                      <div style={{position: 'absolute', bottom: '8px', left: '10px', fontSize: '11px', color: 'rgba(255,255,255,0.7)', background: 'rgba(0,0,0,0.4)', padding: '2px 8px', borderRadius: '20px'}}>
-                        {otherParticipant?.name || 'Remote'}
+                  /* ── Instagram-style video layout ── */
+                  <div style={{position: 'relative', flex: 1, background: '#000', minHeight: '360px'}}>
+
+                    {/* REMOTE video — full area */}
+                    <video
+                      ref={remoteVideoRef}
+                      autoPlay
+                      playsInline
+                      style={{position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block'}}
+                    />
+
+                    {/* Connecting overlay */}
+                    {!remoteHasStream && (
+                      <div style={{position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.75)', fontSize: '14px', gap: '12px', background: 'rgba(0,0,0,0.5)'}}>
+                        <div style={{width: '48px', height: '48px', border: '3px solid rgba(255,255,255,0.2)', borderTopColor: 'white', borderRadius: '50%', animation: 'spin 1s linear infinite'}} />
+                        <span style={{fontWeight: 500}}>Waiting for {otherParticipant?.name}…</span>
                       </div>
+                    )}
+
+                    {/* Remote name label */}
+                    <div style={{position: 'absolute', bottom: '16px', left: '16px', fontSize: '13px', fontWeight: 600, color: 'rgba(255,255,255,0.9)', background: 'rgba(0,0,0,0.45)', padding: '4px 12px', borderRadius: '20px', backdropFilter: 'blur(4px)'}}>
+                      {otherParticipant?.name || 'Remote'}
                     </div>
 
-                    {/* Local video - small PiP */}
-                    <div style={{height: '110px', flexShrink: 0, borderRadius: '10px', overflow: 'hidden', background: '#111', position: 'relative'}}>
+                    {/* Duration pill */}
+                    <div style={{position: 'absolute', top: '14px', left: '50%', transform: 'translateX(-50%)', fontSize: '12px', fontWeight: 600, color: 'rgba(255,255,255,0.85)', background: 'rgba(0,0,0,0.4)', padding: '4px 14px', borderRadius: '20px', backdropFilter: 'blur(4px)', whiteSpace: 'nowrap'}}>
+                      {liveCallDurationLabel}
+                    </div>
+
+                    {/* LOCAL video — small floating PiP (bottom-right corner) */}
+                    <div style={{
+                      position: 'absolute', bottom: '16px', right: '16px',
+                      width: '100px', height: '140px',
+                      borderRadius: '14px', overflow: 'hidden',
+                      border: '2px solid rgba(255,255,255,0.25)',
+                      background: '#111',
+                      boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+                      zIndex: 10
+                    }}>
                       <video
                         ref={localVideoRef}
                         autoPlay
@@ -1649,43 +1715,54 @@ export default function ChatWindow({ room, onClose }: ChatWindowProps) {
                         playsInline
                         style={{width: '100%', height: '100%', objectFit: 'cover', display: 'block'}}
                       />
-                      <div style={{position: 'absolute', bottom: '6px', left: '8px', fontSize: '11px', color: 'rgba(255,255,255,0.7)', background: 'rgba(0,0,0,0.4)', padding: '2px 8px', borderRadius: '20px'}}>
+                      <div style={{position: 'absolute', bottom: '5px', left: '7px', fontSize: '10px', fontWeight: 600, color: 'rgba(255,255,255,0.8)', background: 'rgba(0,0,0,0.4)', padding: '2px 7px', borderRadius: '10px'}}>
                         You
                       </div>
                     </div>
+
+                    {/* End call button — floating at bottom center */}
+                    <div style={{position: 'absolute', bottom: '24px', left: '50%', transform: 'translateX(-50%)', zIndex: 10}}>
+                      <button
+                        title="End call"
+                        type="button"
+                        onClick={() => endCall()}
+                        style={{background: '#dc2626', color: 'white', border: 'none', borderRadius: '50px', padding: '12px 32px', fontWeight: 700, fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 8px 24px rgba(220,38,38,0.45)'}}
+                      >
+                        <Phone style={{width: '16px', height: '16px', transform: 'rotate(135deg)'}} />
+                        End call
+                      </button>
+                    </div>
                   </div>
                 ) : (
-                  /* Audio call - show avatar */
-                  <div style={{flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px', padding: '24px'}}>
-                    <div style={{width: '80px', height: '80px', borderRadius: '50%', background: 'var(--chat-raised)', overflow: 'hidden', border: '3px solid var(--chat-accent)'}}>
+                  /* Audio call */
+                  <div style={{flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', padding: '40px 24px', background: 'linear-gradient(135deg, #0f0f1a 0%, #1a0a2e 100%)'}}>
+                    <div style={{width: '96px', height: '96px', borderRadius: '50%', overflow: 'hidden', border: '3px solid rgba(99,102,241,0.7)', boxShadow: '0 0 0 12px rgba(99,102,241,0.1)'}}>
                       {otherParticipant?.profilePhoto ? (
                         <img src={resolveMediaUrl(otherParticipant.profilePhoto)} alt="" style={{width: '100%', height: '100%', objectFit: 'cover'}} />
                       ) : (
-                        <div style={{width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px'}}>
+                        <div style={{width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '40px', background: '#1e1e2e'}}>
                           {otherParticipant?.name?.[0]?.toUpperCase() || '?'}
                         </div>
                       )}
                     </div>
-                    <p style={{fontWeight: 600, fontSize: '16px'}}>{otherParticipant?.name}</p>
-                    <p style={{fontSize: '13px', color: 'var(--chat-muted)'}}>Audio call in progress…</p>
+                    <div style={{textAlign: 'center'}}>
+                      <p style={{fontWeight: 700, fontSize: '20px', color: 'white', margin: 0}}>{otherParticipant?.name}</p>
+                      <p style={{fontSize: '13px', color: 'rgba(255,255,255,0.45)', marginTop: '6px'}}>🎙️ Audio call • {liveCallDurationLabel}</p>
+                    </div>
                     {/* Hidden audio-only elements */}
                     <video ref={localVideoRef} autoPlay muted playsInline style={{display: 'none'}} />
                     <video ref={remoteVideoRef} autoPlay playsInline style={{display: 'none'}} />
+                    <button
+                      title="End call"
+                      type="button"
+                      onClick={() => endCall()}
+                      style={{background: '#dc2626', color: 'white', border: 'none', borderRadius: '50px', padding: '14px 40px', fontWeight: 700, fontSize: '15px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', boxShadow: '0 8px 24px rgba(220,38,38,0.4)', marginTop: '8px'}}
+                    >
+                      <Phone style={{width: '18px', height: '18px', transform: 'rotate(135deg)'}} />
+                      End call
+                    </button>
                   </div>
                 )}
-
-                {/* End call button */}
-                <div style={{padding: '12px 16px', flexShrink: 0, borderTop: '1px solid var(--chat-border)', display: 'flex', justifyContent: 'center'}}>
-                  <button
-                    title="End call"
-                    type="button"
-                    onClick={() => endCall()}
-                    style={{background: '#dc2626', color: 'white', border: 'none', borderRadius: '50px', padding: '10px 32px', fontWeight: 600, fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px'}}
-                  >
-                    <Phone style={{width: '16px', height: '16px', transform: 'rotate(135deg)'}} />
-                    End call
-                  </button>
-                </div>
               </div>
             )}
           </div>
